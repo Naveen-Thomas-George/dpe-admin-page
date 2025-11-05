@@ -20,6 +20,14 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const router = useRouter()
 
+  const applyDarkMode = (isDark: boolean) => {
+    if (isDark) {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
+  }
+
   useEffect(() => {
     setMounted(true)
     const savedDarkMode = localStorage.getItem("adminDarkMode")
@@ -31,14 +39,6 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
       applyDarkMode(true)
     }
   }, [])
-
-  const applyDarkMode = (isDark: boolean) => {
-    if (isDark) {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-  }
 
   const handleLogout = async () => {
     try {

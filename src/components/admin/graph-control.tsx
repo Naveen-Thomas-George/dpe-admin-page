@@ -18,6 +18,13 @@ interface GraphSettings {
   fixtures: GraphConfig
 }
 
+interface GraphCardProps {
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  graphName: string
+  description: string
+}
+
 // TODO: Backend Dev - Integrate AWS DynamoDB for Graph Configuration and Data
 // Steps:
 // 1. Store graph configurations in DynamoDB table 'graph_configs'
