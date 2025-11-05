@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Camera, X, Copy, Check, AlertCircle } from "lucide-react"
-import { BrowserQRCodeReader } from "@zxing/browser"
+import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser"
 
 export function ScanTool() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -14,7 +14,7 @@ export function ScanTool() {
   const [detectionStatus, setDetectionStatus] = useState<"idle" | "scanning" | "detected">("idle")
   const [error, setError] = useState<string | null>(null)
   const [isBrowserReady, setIsBrowserReady] = useState(false)
-  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [controls, setControls] = useState<IScannerControls | null>(null)
 
   const codeReader = useRef<BrowserQRCodeReader | null>(null)
 
@@ -25,34 +25,41 @@ export function ScanTool() {
   }, [])
 
   const startScanning = async () => {
+    if (!codeReader.current) return
+
+    setError(null)
+    setScannedData(null)
+    setDetectionStatus("scanning")
+    setIsScanning(true)
+
     try {
-      setError(null)
-      setScannedData(null)
-      setDetectionStatus("scanning")
-      setIsScanning(true)
-
-      // Start camera
-      const constraints = {
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+      const devices = await BrowserQRCodeReader.listVideoInputDevices()
+      if (devices.length === 0) {
+        setError("No camera devices found.")
+        setIsScanning(false)
+        return
       }
 
-      const videoStream = await navigator.mediaDevices.getUserMedia(constraints)
-      if (videoRef.current) {
-        videoRef.current.srcObject = videoStream
-      }
-      setStream(videoStream)
+      const selectedDeviceId = devices[0].deviceId
 
-      // Decode once from video stream
-      const result = await codeReader.current?.decodeOnceFromVideoDevice(undefined, videoRef.current!)
+      const decodeResult = codeReader.current.decodeFromVideoDevice(
+        selectedDeviceId,
+        videoRef.current!,
+        (result, err, controlsInstance) => {
+          if (result) {
+            setScannedData(result.getText())
+            setDetectionStatus("detected")
+            setIsScanning(false)
+            controlsInstance.stop() // Stop scanning immediately when QR found
+            setControls(null)
+          } else if (err) {
+            // We can ignore decode errors that occur while scanning
+          }
+        }
+      )
 
-      if (result) {
-        setScannedData(result.getText())
-        setDetectionStatus("detected")
-        stopScanning()
-      } else {
-        setError("No QR code detected.")
-        setDetectionStatus("idle")
-      }
+      const activeControls = await decodeResult
+      setControls(activeControls)
     } catch (err) {
       console.error("QR Scan Error:", err)
       let errorMsg = "Unable to access camera"
@@ -74,9 +81,9 @@ export function ScanTool() {
   }
 
   const stopScanning = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      setStream(null)
+    if (controls) {
+      controls.stop()
+      setControls(null)
     }
     setIsScanning(false)
     setDetectionStatus("idle")
@@ -130,6 +137,7 @@ export function ScanTool() {
                 ref={videoRef}
                 autoPlay
                 playsInline
+                muted
                 className="w-full h-full object-cover"
               />
               {isScanning && (
