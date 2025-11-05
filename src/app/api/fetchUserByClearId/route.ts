@@ -1,35 +1,67 @@
 import { NextResponse } from "next/server";
-import { DynamoDBClient, GetItemCommand, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, GetItemCommand, QueryCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
 
 const client = new DynamoDBClient({ region: "eu-north-1" });
 
 export async function POST(req: Request) {
   try {
-    const { clearId } = await req.json();
+    const { identifier } = await req.json();
 
-    if (!clearId) {
-      return NextResponse.json({ error: "Missing CLEAR ID" }, { status: 400 });
+    if (!identifier) {
+      return NextResponse.json({ error: "Missing identifier (CLEAR ID or Gmail)" }, { status: 400 });
     }
 
-    // --- 1️⃣ Fetch user info ---
-    const userCmd = new GetItemCommand({
-      TableName: "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
-      Key: { CLEAR_ID: { S: clearId } },
-    });
+    let user;
+    const isGmail = identifier.includes('@');
 
-    const userData = await client.send(userCmd);
-    if (!userData.Item) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (isGmail) {
+      // --- Gmail lookup: Scan table for matching christGmail ---
+      // Note: Scanning is expensive, consider adding GSI for christGmail in production
+      const scanCmd = new ScanCommand({
+        TableName: "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
+        FilterExpression: "christGmail = :gmail",
+        ExpressionAttributeValues: {
+          ":gmail": { S: identifier },
+        },
+      });
+
+      const scanResult = await client.send(scanCmd);
+      if (!scanResult.Items || scanResult.Items.length === 0) {
+        return NextResponse.json({ error: "User not found with this Gmail" }, { status: 404 });
+      }
+
+      // Check for duplicates
+      const duplicateCount = scanResult.Items.length;
+      user = unmarshall(scanResult.Items[0]); // Use first match
+
+      // Add duplicate warning to response
+      if (duplicateCount > 1) {
+        user.duplicateWarning = `Found ${duplicateCount} users with this Gmail. Showing first match.`;
+      }
+    } else {
+      // --- CLEAR ID lookup ---
+      const userCmd = new GetItemCommand({
+        TableName: "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
+        Key: { clearId: { S: identifier } },
+      });
+
+      const userData = await client.send(userCmd);
+      if (!userData.Item) {
+        return NextResponse.json({ error: "User not found with this CLEAR ID" }, { status: 404 });
+      }
+      user = unmarshall(userData.Item);
     }
-    const user = unmarshall(userData.Item);
 
-    // --- 2️⃣ Fetch event registrations ---
+    // --- 2️⃣ Fetch event registrations (FIXED: Added IndexName for GSI) ---
     const eventCmd = new QueryCommand({
       TableName: "IndividualRegistration-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
-      KeyConditionExpression: "CLEAR_ID = :id",
+      // IMPORTANT: You must use a GSI to query on a non-primary key attribute.
+      // Replace "clearId-index" with the actual name of your GSI if it is different.
+      IndexName: "gsi-User.individualRegistrations",
+      KeyConditionExpression: "playerClearId  = :id",
       ExpressionAttributeValues: {
-        ":id": { S: clearId },
+        ":id": { S: user.clearId },
       },
     });
 
@@ -50,15 +82,20 @@ export async function POST(req: Request) {
       { name: "Long Jump", id: "SIDI010", category: "jump" },
     ];
 
-    const userEvents = events.map((reg) => {
-      const match = eventList.find((e) => e.id === reg.eventId);
-      return match || { id: reg.eventId, name: "Unknown Event", category: "unknown" };
-    });
+    // Remove duplicates and show only unique events
+    const uniqueEvents = events
+      .map((reg) => {
+        const match = eventList.find((e) => e.id === reg.eventId);
+        return match || { id: reg.eventId, name: "Unknown Event", category: "unknown" };
+      })
+      .filter((event, index, self) =>
+        index === self.findIndex((e) => e.id === event.id)
+      );
 
     // --- 4️⃣ Final Response ---
     return NextResponse.json({
       user,
-      registeredEvents: userEvents,
+      registeredEvents: uniqueEvents,
     });
   } catch (error) {
     console.error("Fetch user failed:", error);
