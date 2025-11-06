@@ -1,15 +1,24 @@
 "use client"
 
-// ...existing code...
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { QrCode, Newspaper, BarChart3, LogOut, Moon, Sun, Menu, X, Trophy, Calendar } from "lucide-react"
 import { signOut } from "@aws-amplify/auth"
 import { useRouter } from "next/navigation"
 
-// ...existing code...
+// Helper function to get initial dark mode state from localStorage
+const getInitialDarkMode = (): boolean => {
+  if (typeof window === 'undefined') {
+    // Default to true (dark mode) on the server to prevent flash of wrong theme
+    return true 
+  }
+  const savedDarkMode = localStorage.getItem('adminDarkMode')
+  if (savedDarkMode !== null) {
+    return JSON.parse(savedDarkMode)
+  }
+  return true // Default to dark mode if no preference is saved
+}
+
 interface AdminLayoutProps {
   children: React.ReactNode
   activeSection: string
@@ -17,67 +26,58 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, activeSection, onSectionChange }: AdminLayoutProps) {
-  const [isDarkMode, setIsDarkMode] = useState(true)
-  const [mounted, setMounted] = useState(false)
+  // 1. Initialize isDarkMode lazily. This runs only once on the client.
+  const [isDarkMode, setIsDarkMode] = useState(getInitialDarkMode)
+  
+  // sidebarOpen is fine as is
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const router = useRouter()
 
-  // Add mounted effect
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   const applyDarkMode = (isDark: boolean) => {
-    if (isDark) {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
+    // Ensure we only modify the DOM on the client side
+    if (typeof document !== 'undefined') {
+      if (isDark) {
+        document.documentElement.classList.add("dark")
+      } else {
+        document.documentElement.classList.remove("dark")
+      }
     }
   }
 
+  // 2. Use a single effect to sync React state (isDarkMode) to the external system (DOM/localStorage)
   useEffect(() => {
-    const initializeDarkMode = () => {
-      const savedDarkMode = localStorage.getItem('adminDarkMode') // Match the key used in toggleDarkMode
-      if (savedDarkMode !== null) {
-        const isDark = JSON.parse(savedDarkMode)
-        requestAnimationFrame(() => {
-          setIsDarkMode(isDark)
-          applyDarkMode(isDark)
-        })
-      } else {
-        applyDarkMode(true)
-      }
-    }
+    // Apply the current state on initial render (on client) and whenever isDarkMode changes
+    applyDarkMode(isDarkMode)
     
-    initializeDarkMode()
-  }, [])
+    // Save preference to localStorage every time it changes
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('adminDarkMode', JSON.stringify(isDarkMode)) 
+    }
+  }, [isDarkMode]) // Dependency on isDarkMode
 
   // handleLogout function
   const handleLogout = async () => {
     try {
-      await signOut()
-      router.push('/login') // Adjust the route as needed
+      // In a real application, you need to ensure @aws-amplify/auth is correctly configured
+      // and imported in your root/layout file to ensure this works.
+      await signOut() 
+      router.push('/login') 
     } catch (error) {
       console.error('Error signing out:', error)
-      // Optionally add error handling UI feedback here
+      // Display error to user here
     }
   }
 
-  // toggleDarkMode function
+  // toggleDarkMode function is now simpler
   const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode
-    setIsDarkMode(newDarkMode)
-    applyDarkMode(newDarkMode)
-    localStorage.setItem('adminDarkMode', JSON.stringify(newDarkMode)) // Save preference
+    setIsDarkMode(prev => !prev)
   }
 
-  // Don't render until mounted to avoid hydration issues
-  if (!mounted) {
-    return null
-  }
+  // NOTE: The 'if (!mounted) return null;' is now removed.
 
   return (
-    <div className={isDarkMode ? "dark" : ""}>
+    // 3. The 'dark' class is conditionally applied based on the state for styling
+    <div className={isDarkMode ? "dark" : ""}> 
       <div className="flex h-screen bg-background text-foreground">
         <aside
           className={`border-r border-sidebar-border bg-sidebar flex flex-col shadow-lg transition-all duration-300 ease-in-out ${
@@ -178,6 +178,7 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
   )
 }
 
+// NavButton component remains the same
 interface NavButtonProps {
   icon: React.ReactNode
   label: string
@@ -200,4 +201,3 @@ function NavButton({ icon, label, isActive, onClick }: NavButtonProps) {
     </button>
   )
 }
-// ...existing code...
