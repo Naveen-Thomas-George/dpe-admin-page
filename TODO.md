@@ -1,6 +1,7 @@
-# TODO: Fix Build Errors
+# TODO: Fix Login Form for AWS Cognito Integration
 
-- [ ] Remove unused 'FieldSeparator' import from login-form.tsx
-- [ ] Remove unused 'err' variable in catch block of login-form.tsx
-- [ ] Replace Math.random() with fixed width in SidebarMenuSkeleton of sidebar.tsx
-- [ ] Run npm run build to verify fixes
+- [ ] Update imports in login-form.tsx to use real Amplify and Next.js hooks
+- [ ] Remove all mock code (Authenticator mock, useMockAuth, etc.)
+- [ ] Implement real Authenticator with custom components (Header, Footer)
+- [ ] Add useEffect for redirection on authenticated status
+- [ ] Test the login functionality with AWS Cognito

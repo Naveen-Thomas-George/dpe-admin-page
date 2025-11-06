@@ -5,7 +5,6 @@ import {
   ScanCommand,
   PutCommand,
   UpdateCommand,
-  DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({

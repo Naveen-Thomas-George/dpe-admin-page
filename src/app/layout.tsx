@@ -4,6 +4,7 @@ import "./globals.css";
 import { AmplifyProvider } from "@/components/AmplifyProvider";
 import "@aws-amplify/ui-react/styles.css";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

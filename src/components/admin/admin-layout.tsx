@@ -1,5 +1,6 @@
 "use client"
 
+// ...existing code...
 import type React from "react"
 
 import { useState, useEffect } from "react"
@@ -8,6 +9,7 @@ import { QrCode, Newspaper, BarChart3, LogOut, Moon, Sun, Menu, X, Trophy, Calen
 import { signOut } from "@aws-amplify/auth"
 import { useRouter } from "next/navigation"
 
+// ...existing code...
 interface AdminLayoutProps {
   children: React.ReactNode
   activeSection: string
@@ -20,6 +22,11 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const router = useRouter()
 
+  // Add mounted effect
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const applyDarkMode = (isDark: boolean) => {
     if (isDark) {
       document.documentElement.classList.add("dark")
@@ -29,33 +36,42 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
   }
 
   useEffect(() => {
-    setMounted(true)
-    const savedDarkMode = localStorage.getItem("adminDarkMode")
-    if (savedDarkMode !== null) {
-      const isDark = JSON.parse(savedDarkMode)
-      setIsDarkMode(isDark)
-      applyDarkMode(isDark)
-    } else {
-      applyDarkMode(true)
+    const initializeDarkMode = () => {
+      const savedDarkMode = localStorage.getItem('adminDarkMode') // Match the key used in toggleDarkMode
+      if (savedDarkMode !== null) {
+        const isDark = JSON.parse(savedDarkMode)
+        requestAnimationFrame(() => {
+          setIsDarkMode(isDark)
+          applyDarkMode(isDark)
+        })
+      } else {
+        applyDarkMode(true)
+      }
     }
+    
+    initializeDarkMode()
   }, [])
 
+  // handleLogout function
   const handleLogout = async () => {
     try {
       await signOut()
-      router.push('/') // Redirect to home page after logout
+      router.push('/login') // Adjust the route as needed
     } catch (error) {
       console.error('Error signing out:', error)
+      // Optionally add error handling UI feedback here
     }
   }
 
+  // toggleDarkMode function
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode
     setIsDarkMode(newDarkMode)
     applyDarkMode(newDarkMode)
-    localStorage.setItem("adminDarkMode", JSON.stringify(newDarkMode))
+    localStorage.setItem('adminDarkMode', JSON.stringify(newDarkMode)) // Save preference
   }
 
+  // Don't render until mounted to avoid hydration issues
   if (!mounted) {
     return null
   }
@@ -184,3 +200,4 @@ function NavButton({ icon, label, isActive, onClick }: NavButtonProps) {
     </button>
   )
 }
+// ...existing code...
