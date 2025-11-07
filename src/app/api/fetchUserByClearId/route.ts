@@ -2,7 +2,22 @@ import { NextResponse } from "next/server";
 import { DynamoDBClient, GetItemCommand, QueryCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
 
-const client = new DynamoDBClient({ region: "eu-north-1" });
+/**
+ * DynamoDB Client Setup
+ * Automatically reads credentials from environment variables.
+ * Make sure these are defined in your .env.local (for local) and Vercel dashboard (for production):
+ * 
+ * AWS_REGION=eu-north-1
+ * AWS_ACCESS_KEY_ID=your_access_key
+ * AWS_SECRET_ACCESS_KEY=your_secret_key
+ */
+const client = new DynamoDBClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
 export async function POST(req: Request) {
   try {
@@ -13,13 +28,12 @@ export async function POST(req: Request) {
     }
 
     let user;
-    const isGmail = identifier.includes('@');
+    const isGmail = identifier.includes("@");
 
+    // --- 1️⃣ Gmail Lookup ---
     if (isGmail) {
-      // --- Gmail lookup: Scan table for matching christGmail ---
-      // Note: Scanning is expensive, consider adding GSI for christGmail in production
       const scanCmd = new ScanCommand({
-        TableName: "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
+        TableName: process.env.DYNAMODB_USER_TABLE || "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
         FilterExpression: "christGmail = :gmail",
         ExpressionAttributeValues: {
           ":gmail": { S: identifier },
@@ -27,22 +41,22 @@ export async function POST(req: Request) {
       });
 
       const scanResult = await client.send(scanCmd);
+
       if (!scanResult.Items || scanResult.Items.length === 0) {
         return NextResponse.json({ error: "User not found with this Gmail" }, { status: 404 });
       }
 
-      // Check for duplicates
       const duplicateCount = scanResult.Items.length;
-      user = unmarshall(scanResult.Items[0]); // Use first match
+      user = unmarshall(scanResult.Items[0]);
 
-      // Add duplicate warning to response
       if (duplicateCount > 1) {
         user.duplicateWarning = `Found ${duplicateCount} users with this Gmail. Showing first match.`;
       }
+
+    // --- 2️⃣ CLEAR ID Lookup ---
     } else {
-      // --- CLEAR ID lookup ---
       const userCmd = new GetItemCommand({
-        TableName: "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
+        TableName: process.env.DYNAMODB_USER_TABLE || "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
         Key: { clearId: { S: identifier } },
       });
 
@@ -50,16 +64,15 @@ export async function POST(req: Request) {
       if (!userData.Item) {
         return NextResponse.json({ error: "User not found with this CLEAR ID" }, { status: 404 });
       }
+
       user = unmarshall(userData.Item);
     }
 
-    // --- 2️⃣ Fetch event registrations (FIXED: Added IndexName for GSI) ---
+    // --- 3️⃣ Fetch Event Registrations ---
     const eventCmd = new QueryCommand({
-      TableName: "IndividualRegistration-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
-      // IMPORTANT: You must use a GSI to query on a non-primary key attribute.
-      // Replace "clearId-index" with the actual name of your GSI if it is different.
-      IndexName: "gsi-User.individualRegistrations",
-      KeyConditionExpression: "playerClearId  = :id",
+      TableName: process.env.DYNAMODB_EVENT_TABLE || "IndividualRegistration-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
+      IndexName: "gsi-User.individualRegistrations", // Update this to match your actual GSI name
+      KeyConditionExpression: "playerClearId = :id",
       ExpressionAttributeValues: {
         ":id": { S: user.clearId },
       },
@@ -68,7 +81,7 @@ export async function POST(req: Request) {
     const eventData = await client.send(eventCmd);
     const events = eventData.Items ? eventData.Items.map((i) => unmarshall(i)) : [];
 
-    // --- 3️⃣ Map events with IDs to full event info ---
+    // --- 4️⃣ Map Events with Names & IDs ---
     const eventList = [
       { name: "100m", id: "SIDI01", category: "track" },
       { name: "200m", id: "SIDI02", category: "track" },
@@ -82,23 +95,27 @@ export async function POST(req: Request) {
       { name: "Long Jump", id: "SIDI010", category: "jump" },
     ];
 
-    // Remove duplicates and show only unique events
     const uniqueEvents = events
       .map((reg) => {
         const match = eventList.find((e) => e.id === reg.eventId);
         return match || { id: reg.eventId, name: "Unknown Event", category: "unknown" };
       })
-      .filter((event, index, self) =>
-        index === self.findIndex((e) => e.id === event.id)
+      .filter(
+        (event, index, self) => index === self.findIndex((e) => e.id === event.id)
       );
 
-    // --- 4️⃣ Final Response ---
+    // --- ✅ Return Final Response ---
     return NextResponse.json({
       user,
       registeredEvents: uniqueEvents,
     });
   } catch (error) {
     console.error("Fetch user failed:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+
+    // Return detailed error message for debugging (visible only in logs)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
