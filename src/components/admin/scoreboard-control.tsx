@@ -1,309 +1,215 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Trophy, Plus, Edit2, Trash2, Save } from "lucide-react"
+import React, { useState } from 'react';
 
-interface School {
-  id: string
-  school: string
-  color: string
-  totalPoints: number
-  sports: Record<string, number>
+// Define the structure for a single winner's entry
+type WinnerEntry = {
+  position: number;
+  chestNo: string;
+  name: string;
+  school: string;
+};
+
+// Define the props for the component, allowing an eventName to be passed in
+interface ScoreSheetEntryProps {
+  defaultEventName?: string;
 }
 
-export function ScoreboardControl() {
-  // ============================================================================
-  // AWS INTEGRATION NOTES FOR BACKEND DEVELOPERS
-  // ============================================================================
-  // This component manages scoreboard data that should be stored in AWS DynamoDB
-  //
-  // TABLE STRUCTURE (DynamoDB):
-  // Table Name: "sports_scores"
-  // Primary Key: "schoolId" (String)
-  // Attributes:
-  //   - schoolId (String) - Unique identifier for school
-  //   - schoolName (String) - Name of the school
-  //   - color (String) - Hex color code for UI representation
-  //   - totalPoints (Number) - Total points accumulated
-  //   - sports (Map) - Object containing sport names as keys and points as values
-  //   - updatedAt (Number) - Timestamp of last update
-  //   - createdAt (Number) - Timestamp of creation
-  //
-  // API ENDPOINTS NEEDED:
-  // 1. GET /api/admin/scores - Fetch all school scores
-  // 2. POST /api/admin/scores - Create new school score entry
-  // 3. PUT /api/admin/scores/{schoolId} - Update school score
-  // 4. DELETE /api/admin/scores/{schoolId} - Delete school score
-  // 5. PUT /api/admin/scores/{schoolId}/sports/{sportName} - Update specific sport points
-  //
-  // EXAMPLE AWS SDK USAGE (Node.js/Lambda):
-  // const { DynamoDBClient, ScanCommand, PutCommand, UpdateCommand } = require("@aws-sdk/client-dynamodb");
-  // const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
-  // const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-  //
-  // // Fetch all scores
-  // const scanCommand = new ScanCommand({ TableName: "sports_scores" });
-  // const response = await client.send(scanCommand);
-  // const scores = response.Items.map(item => unmarshall(item));
-  //
-  // // Update score
-  // const updateCommand = new UpdateCommand({
-  //   TableName: "sports_scores",
-  //   Key: marshall({ schoolId: schoolId }),
-  //   UpdateExpression: "SET totalPoints = :points, updatedAt = :timestamp",
-  //   ExpressionAttributeValues: marshall({
-  //     ":points": newPoints,
-  //     ":timestamp": Date.now()
-  //   })
-  // });
-  // ============================================================================
+export function ScoreSheetEntry({ defaultEventName = '' }: ScoreSheetEntryProps) {
+  const [eventName, setEventName] = useState(defaultEventName);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '' }); // For success/error messages
 
-  const [schools, setSchools] = useState<School[]>([
-    {
-      id: "1",
-      school: "School of Commerce, Finance and Accountancy",
-      color: "#3b82f6",
-      totalPoints: 120,
-      sports: { "100m": 8, "200m": 6, Football: 10, Basketball: 4, Volleyball: 7 },
-    },
-    {
-      id: "2",
-      school: "School of Business Management",
-      color: "#8b5cf6",
-      totalPoints: 100,
-      sports: { "100m": 6, "200m": 8, Football: 9, "Table Tennis": 4, Badminton: 5 },
-    },
-  ])
+  // Initial state for 3 positions (1st, 2nd, 3rd)
+  const [winners, setWinners] = useState<WinnerEntry[]>([
+    { position: 1, chestNo: '', name: '', school: '' },
+    { position: 2, chestNo: '', name: '', school: '' },
+    { position: 3, chestNo: '', name: '', school: '' },
+  ]);
 
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<School | null>(null)
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newSchool, setNewSchool] = useState<Partial<School>>({
-    school: "",
-    color: "#3b82f6",
-    totalPoints: 0,
-    sports: {},
-  })
+  /**
+   * Handles changes to any input field for any winner.
+   * @param index The position (0, 1, or 2) being updated.
+   * @param field The field name (chestNo, name, school) being changed.
+   * @param value The new value from the input.
+   */
+  const handleInputChange = (index: number, field: keyof Omit<WinnerEntry, 'position'>, value: string) => {
+    const newWinners = [...winners];
+    newWinners[index][field] = value;
+    setWinners(newWinners);
+  };
 
-  const handleEdit = (school: School) => {
-    setEditingId(school.id)
-    setEditForm({ ...school })
-  }
+  /**
+   * Handles the form submission.
+   * Sends the event name and winner data to the backend API route.
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage({ text: '', type: '' });
 
-  const handleSave = () => {
-    if (editForm) {
-      setSchools(schools.map((s) => (s.id === editForm.id ? editForm : s)))
-      setEditingId(null)
-      setEditForm(null)
-      // TODO: AWS Integration - Call PUT /api/admin/scores/{schoolId} to update DynamoDB
-      console.log("[AWS] Update school score:", editForm)
+    // Basic validation
+    if (!eventName.trim()) {
+      setMessage({ text: 'Please enter an Event Name.', type: 'error' });
+      setIsLoading(false);
+      return;
     }
-  }
 
-  const handleDelete = (id: string) => {
-    setSchools(schools.filter((s) => s.id !== id))
-    // TODO: AWS Integration - Call DELETE /api/admin/scores/{schoolId} to remove from DynamoDB
-    console.log("[AWS] Delete school score:", id)
-  }
+    // Filter out any entries that are completely empty
+    const validWinners = winners.filter(
+      w => w.chestNo.trim() !== '' || w.name.trim() !== '' || w.school.trim() !== ''
+    );
 
-  const handleAddSchool = () => {
-    if (newSchool.school) {
-      const school: School = {
-        id: Date.now().toString(),
-        school: newSchool.school || "",
-        color: newSchool.color || "#3b82f6",
-        totalPoints: newSchool.totalPoints || 0,
-        sports: newSchool.sports || {},
+    if (validWinners.length === 0) {
+       setMessage({ text: 'Please enter details for at least one winner.', type: 'error' });
+       setIsLoading(false);
+       return;
+    }
+
+    try {
+      // Send data to the Next.js API route
+      const response = await fetch('/api/save-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventName, winners: validWinners }), // Send only valid winners
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save score sheet.');
       }
-      setSchools([...schools, school])
-      setNewSchool({ school: "", color: "#3b82f6", totalPoints: 0, sports: {} })
-      setShowAddForm(false)
-      // TODO: AWS Integration - Call POST /api/admin/scores to create new entry in DynamoDB
-      console.log("[AWS] Create new school score:", school)
-    }
-  }
 
-  const handleUpdateSportPoints = (schoolId: string, sport: string, points: number) => {
-    setSchools(schools.map((s) => (s.id === schoolId ? { ...s, sports: { ...s.sports, [sport]: points } } : s)))
-    // TODO: AWS Integration - Call PUT /api/admin/scores/{schoolId}/sports/{sport} to update specific sport
-    console.log("[AWS] Update sport points:", { schoolId, sport, points })
+      setMessage({ text: '✅ Score sheet saved successfully!', type: 'success' });
+      
+      // Optionally clear the form after success
+      // setEventName('');
+      // setWinners([
+      //   { position: 1, chestNo: '', name: '', school: '' },
+      //   { position: 2, chestNo: '', name: '', school: '' },
+      //   { position: 3, chestNo: '', name: '', school: '' },
+      // ]);
+
+    } catch (error) {
+      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      setMessage({ text: `❌ ${errorMessage}`, type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper to get position-specific styling
+  const getPositionStyles = (index: number) => {
+    switch (index) {
+      case 0: return 'bg-yellow-50 border-yellow-400'; // 1st Place
+      case 1: return 'bg-gray-50 border-gray-300';     // 2nd Place
+      case 2: return 'bg-orange-50 border-orange-300'; // 3rd Place
+      default: return 'bg-white border-gray-200';
+    }
+  };
+
+  // Helper to get position-specific emoji
+  const getPositionEmoji = (index: number) => {
+     switch (index) {
+      case 0: return '🥇 1st Place';
+      case 1: return '🥈 2nd Place';
+      case 2: return '🥉 3rd Place';
+      default: return `Position ${index + 1}`;
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Trophy className="text-yellow-500" />
-          Scoreboard Control
-        </h1>
-        <Button onClick={() => setShowAddForm(!showAddForm)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Add School
-        </Button>
+    <div className="p-6 max-w-4xl mx-auto bg-white shadow-xl rounded-2xl border border-gray-200 font-inter">
+      <h2 className="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+        <span className="text-4xl mr-3">🏆</span> Official Event Score Sheet
+      </h2>
+
+      {/* Event Name Input */}
+      <div className="mb-8">
+        <label htmlFor="eventName" className="block text-sm font-bold text-gray-700 mb-2">
+          Event Name / ID
+        </label>
+        <input
+          type="text"
+          id="eventName"
+          placeholder="e.g., 100m Sprint Boys Final"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg"
+          value={eventName}
+          onChange={(e) => setEventName(e.target.value)}
+          required
+        />
       </div>
 
-      {/* Add School Form */}
-      <AnimatePresence>
-        {showAddForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-              <CardHeader>
-                <CardTitle>Add New School</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+      {/* Main Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {winners.map((winner, index) => (
+          <div key={winner.position} className={`p-5 rounded-lg border-l-8 ${getPositionStyles(index)}`}>
+             <h3 className="font-bold text-xl mb-4 text-gray-700">
+                {getPositionEmoji(index)}
+             </h3>
+             
+             {/* Grid layout for inputs */}
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Chest Number */}
                 <div>
-                  <Label>School Name</Label>
-                  <Input
-                    value={newSchool.school || ""}
-                    onChange={(e) => setNewSchool({ ...newSchool, school: e.target.value })}
-                    placeholder="Enter school name"
-                  />
+                    <label htmlFor={`chestNo-${index}`} className="block text-xs font-medium text-gray-500 mb-1">Chest No.</label>
+                    <input
+                        type="text"
+                        id={`chestNo-${index}`}
+                        placeholder="123"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+                        value={winner.chestNo}
+                        onChange={(e) => handleInputChange(index, 'chestNo', e.target.value)}
+                    />
                 </div>
+                {/* Athlete Name */}
                 <div>
-                  <Label>Color</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="color"
-                      value={newSchool.color || "#3b82f6"}
-                      onChange={(e) => setNewSchool({ ...newSchool, color: e.target.value })}
-                      className="w-20 h-10"
+                    <label htmlFor={`name-${index}`} className="block text-xs font-medium text-gray-500 mb-1">Athlete Name</label>
+                    <input
+                        type="text"
+                        id={`name-${index}`}
+                        placeholder="Full Name"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+                        value={winner.name}
+                        onChange={(e) => handleInputChange(index, 'name', e.target.value)}
                     />
-                    <Input
-                      value={newSchool.color || "#3b82f6"}
-                      onChange={(e) => setNewSchool({ ...newSchool, color: e.target.value })}
-                      placeholder="#3b82f6"
-                    />
-                  </div>
                 </div>
+                {/* School / Team */}
                 <div>
-                  <Label>Initial Points</Label>
-                  <Input
-                    type="number"
-                    value={newSchool.totalPoints || 0}
-                    onChange={(e) => setNewSchool({ ...newSchool, totalPoints: Number.parseInt(e.target.value) })}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleAddSchool} className="gap-2">
-                    <Save className="w-4 h-4" />
-                    Create
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowAddForm(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Schools List */}
-      <div className="space-y-4">
-        {schools.map((school) => (
-          <Card key={school.id} className="overflow-hidden">
-            <CardHeader className="flex justify-between items-start">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: school.color }} />
-                <div>
-                  <CardTitle className="text-lg">{school.school}</CardTitle>
-                  <p className="text-sm text-gray-500">Total Points: {school.totalPoints}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {editingId === school.id ? (
-                  <>
-                    <Button size="sm" onClick={handleSave} className="gap-2">
-                      <Save className="w-4 h-4" />
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(school)} className="gap-2">
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(school.id)} className="gap-2">
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardHeader>
-
-            {/* Edit Form or Sports Display */}
-            <CardContent className="space-y-4">
-              {editingId === school.id && editForm ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label>School Name</Label>
-                    <Input
-                      value={editForm.school}
-                      onChange={(e) => setEditForm({ ...editForm, school: e.target.value })}
+                    <label htmlFor={`school-${index}`} className="block text-xs font-medium text-gray-500 mb-1">School / Team</label>
+                    <input
+                        type="text"
+                        id={`school-${index}`}
+                        placeholder="School Name"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+                        value={winner.school}
+                        onChange={(e) => handleInputChange(index, 'school', e.target.value)}
                     />
-                  </div>
-                  <div>
-                    <Label>Total Points</Label>
-                    <Input
-                      type="number"
-                      value={editForm.totalPoints}
-                      onChange={(e) => setEditForm({ ...editForm, totalPoints: Number.parseInt(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <Label>Sports Points</Label>
-                    <div className="space-y-2">
-                      {Object.entries(editForm.sports).map(([sport, points]) => (
-                        <div key={sport} className="flex gap-2 items-center">
-                          <span className="w-32">{sport}</span>
-                          <Input
-                            type="number"
-                            value={points}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                sports: {
-                                  ...editForm.sports,
-                                  [sport]: Number.parseInt(e.target.value),
-                                },
-                              })
-                            }
-                            className="w-20"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {Object.entries(school.sports).map(([sport, points]) => (
-                    <div key={sport} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
-                      <p className="text-sm font-medium">{sport}</p>
-                      <p className="text-lg font-bold text-blue-600">{points}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+             </div>
+          </div>
         ))}
-      </div>
+
+        {/* Message Display Area */}
+        {message.text && (
+          <div className={`p-4 rounded-lg text-center font-medium ${message.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
+            {message.text}
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className={`w-full py-4 px-6 rounded-lg text-white font-bold text-lg transition-all transform active:scale-95
+            ${isLoading 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-blue-500/30'
+            }`}
+        >
+          {isLoading ? 'Saving Records...' : '🔒 Submit Final Score Sheet'}
+        </button>
+      </form>
     </div>
-  )
+  );
 }

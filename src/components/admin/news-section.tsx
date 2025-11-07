@@ -16,7 +16,6 @@ interface NewsItem {
 export function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ title: "", description: "" });
@@ -28,9 +27,6 @@ export function NewsSection() {
       const res = await fetch("/api/news");
       const data = await res.json();
       setNews(data.items || []);
-    } catch (err) {
-      console.error("❌ Fetch error:", err);
-      setError("Failed to fetch news");
     } finally {
       setLoading(false);
     }

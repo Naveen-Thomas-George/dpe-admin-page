@@ -7,8 +7,8 @@ import { getCurrentUser } from 'aws-amplify/auth/server';
 // You will need to create this file after deploying your backend for the first time
 import { type Schema } from '@/amplify/data/resource'; 
 
-// Use the generated configuration file
-import outputs from '@/amplify_outputs.json'; 
+// Import the configuration file
+import outputs from '../../amplify_outputs.json';
 
 // 1. Setup the Server Runner
 export const { runWithAmplifyServerContext } = createServerRunner({

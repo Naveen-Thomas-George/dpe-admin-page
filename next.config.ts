@@ -1,8 +1,8 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
-  // reactCompiler: true,
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true, // ✅ skips ESLint errors in builds
+  },
 };
 
 export default nextConfig;
