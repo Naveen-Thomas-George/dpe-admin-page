@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 // (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
 
 const client = new DynamoDBClient({
-    region: process.env.AWS_REGION || "us-east-1", // Default region if not set
+    region: process.env.AWS_REGION || "eu-north-1", // Default region if not set
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
