@@ -15,7 +15,7 @@ const client = new DynamoDBClient({
 });
 
 const docClient = DynamoDBDocumentClient.from(client);
-const TABLE_NAME = "Score-ao7ebzdnjvahrhfgmey6i6vzfu-NONE"; // Score table
+const TABLE_NAME = "Score-table"; // Score table
 
 // --- Helper Types ---
 type WinnerEntry = {

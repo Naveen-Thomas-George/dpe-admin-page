@@ -11,7 +11,7 @@ const client = new DynamoDBClient({
 });
 
 const docClient = DynamoDBDocumentClient.from(client);
-const SCHOOL_TABLE = "School-ao7ebzdnjvahrhfgmey6i6vzfu-NONE";
+const SCHOOL_TABLE = "School-table";
 
 export async function POST(request: Request) {
   try {
