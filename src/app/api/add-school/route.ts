@@ -10,6 +10,7 @@ const client = new DynamoDBClient({
   },
 });
 
+
 const docClient = DynamoDBDocumentClient.from(client);
 const SCHOOL_TABLE = "School-table";
 
