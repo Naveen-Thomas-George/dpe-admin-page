@@ -18,8 +18,8 @@ export default function AdminPage() {
       {activeSection === "scan" && <ScanTool />}
       {activeSection === "news" && <NewsSection />}
       {activeSection === "scoreboard" && <ScoreSheetEntry />}
-      {activeSection === "fixtures" && <FixturesControl />}
       {activeSection === "graphs" && <ScoreboardDashboard />}
+      {activeSection === "fixtures" && <FixturesControl />}
     </AdminLayout>
   )
 }

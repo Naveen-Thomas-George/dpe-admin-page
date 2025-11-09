@@ -13,9 +13,10 @@ type WinnerEntry = {
 // Define the props for the component, allowing an eventName to be passed in
 interface ScoreSheetEntryProps {
   defaultEventName?: string;
+  onSuccess?: () => void;
 }
 
-export function ScoreSheetEntry({ defaultEventName = '' }: ScoreSheetEntryProps) {
+export function ScoreSheetEntry({ defaultEventName = '', onSuccess }: ScoreSheetEntryProps) {
   const [eventName, setEventName] = useState(defaultEventName);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' }); // For success/error messages
@@ -80,7 +81,12 @@ export function ScoreSheetEntry({ defaultEventName = '' }: ScoreSheetEntryProps)
       }
 
       setMessage({ text: '✅ Score sheet saved successfully!', type: 'success' });
-      
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+
       // Optionally clear the form after success
       // setEventName('');
       // setWinners([
@@ -147,7 +153,7 @@ export function ScoreSheetEntry({ defaultEventName = '' }: ScoreSheetEntryProps)
              <h3 className="font-bold text-xl mb-4 text-gray-700">
                 {getPositionEmoji(index)}
              </h3>
-             
+
              {/* Grid layout for inputs */}
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Chest Number */}
@@ -202,8 +208,8 @@ export function ScoreSheetEntry({ defaultEventName = '' }: ScoreSheetEntryProps)
           type="submit"
           disabled={isLoading}
           className={`w-full py-4 px-6 rounded-lg text-white font-bold text-lg transition-all transform active:scale-95
-            ${isLoading 
-              ? 'bg-gray-400 cursor-not-allowed' 
+            ${isLoading
+              ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-blue-500/30'
             }`}
         >
