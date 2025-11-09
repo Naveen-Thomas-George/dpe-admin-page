@@ -11,8 +11,8 @@ const client = new DynamoDBClient({
 });
 
 const docClient = DynamoDBDocumentClient.from(client);
-const SCORE_TABLE = "Score-ao7ebzdnjvahrhfgmey6i6vzfu-NONE";
-const SCHOOL_TABLE = "School-ao7ebzdnjvahrhfgmey6i6vzfu-NONE";
+const SCORE_TABLE = "Score-table";
+const SCHOOL_TABLE = "School-table";
 
 export async function GET() {
   try {
