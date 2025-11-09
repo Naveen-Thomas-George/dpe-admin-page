@@ -6,11 +6,12 @@ import { ScanTool } from "@/components/admin/scan-tool"
 import { NewsSection } from "@/components/admin/news-section"
 import { ScoreSheetEntry } from "@/components/admin/scoreboard-control"
 import { FixturesControl } from "@/components/admin/fixtures-control"
+import { ScoreboardDashboard } from "@/components/admin/scoreboard-dashboard"
 
 type AdminSection = "scan" | "news" | "scoreboard" | "fixtures" | "graphs"
 
 export default function AdminPage() {
-  const [activeSection, setActiveSection] = useState<AdminSection>("scan")
+  const [activeSection, setActiveSection] = useState<AdminSection>("graphs")
 
   return (
     <AdminLayout activeSection={activeSection} onSectionChange={setActiveSection}>
@@ -18,6 +19,7 @@ export default function AdminPage() {
       {activeSection === "news" && <NewsSection />}
       {activeSection === "scoreboard" && <ScoreSheetEntry />}
       {activeSection === "fixtures" && <FixturesControl />}
+      {activeSection === "graphs" && <ScoreboardDashboard />}
     </AdminLayout>
   )
 }
