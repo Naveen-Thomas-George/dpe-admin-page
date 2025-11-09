@@ -80,6 +80,9 @@ export async function GET() {
         name: score.StudentName,
         event: score.EventName,
         school: score.SchoolName,
+        chestNo: score.ChestNo,
+        position: score.Position,
+        eventId: score.EventID,
       }));
 
     return NextResponse.json({
