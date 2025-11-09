@@ -16,6 +16,14 @@ interface ScoreSheetEntryProps {
   onSuccess?: () => void;
 }
 
+const SCHOOLS = [
+  { name: "School of Business and Management", short: "SBM" },
+  { name: "School of Commerce, Finance and Accountancy", short: "SCFA" },
+  { name: "School of Psychological Sciences", short: "SOPS" },
+  { name: "School of Sciences", short: "SOS" },
+  { name: "School of Social Sciences", short: "SOSS" },
+];
+
 export function ScoreSheetEntry({ defaultEventName = '', onSuccess }: ScoreSheetEntryProps) {
   const [eventName, setEventName] = useState(defaultEventName);
   const [isLoading, setIsLoading] = useState(false);
@@ -183,14 +191,19 @@ export function ScoreSheetEntry({ defaultEventName = '', onSuccess }: ScoreSheet
                 {/* School / Team */}
                 <div>
                     <label htmlFor={`school-${index}`} className="block text-xs font-medium text-gray-500 mb-1">School / Team</label>
-                    <input
-                        type="text"
+                    <select
                         id={`school-${index}`}
-                        placeholder="School Name"
                         className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
                         value={winner.school}
                         onChange={(e) => handleInputChange(index, 'school', e.target.value)}
-                    />
+                    >
+                        <option value="">Select School</option>
+                        {SCHOOLS.map((school) => (
+                          <option key={school.short} value={school.name}>
+                            {school.name} ({school.short})
+                          </option>
+                        ))}
+                    </select>
                 </div>
              </div>
           </div>
