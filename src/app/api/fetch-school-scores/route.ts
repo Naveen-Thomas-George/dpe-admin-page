@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
 
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || "eu-north-1",
+  region: "eu-north-1", // Use the correct region from amplify_outputs.json
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",

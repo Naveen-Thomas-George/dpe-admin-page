@@ -1,4 +1,4 @@
-        import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, BatchWriteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
 
@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 // (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
 
 const client = new DynamoDBClient({
-    region: process.env.AWS_REGION || "eu-north-1", // Default region if not set
+    region: "eu-north-1", // Use the correct region from amplify_outputs.json
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
