@@ -17,7 +17,7 @@ const client = new DynamoDBClient({
 
 const ddbDocClient = DynamoDBDocumentClient.from(client);
 
-const TABLE_NAME = process.env.TABLE_NAME!;
+const TABLE_NAME = process.env.NEWS_TABLE_NAME!;
 
 // 🟢 Fetch all news
 export async function GET() {
