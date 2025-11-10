@@ -22,7 +22,7 @@ const getInitialDarkMode = (): boolean => {
 interface AdminLayoutProps {
   children: React.ReactNode
   activeSection: string
-  onSectionChange: (section: "scan" | "news" | "graphs" | "scoreboard" | "fixtures") => void
+  onSectionChange: (section: "scan" | "news" | "scoreboard" | "fixtures") => void
 }
 
 export function AdminLayout({ children, activeSection, onSectionChange }: AdminLayoutProps) {
@@ -116,12 +116,6 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
               isActive={activeSection === "fixtures"}
               onClick={() => onSectionChange("fixtures")}
             />
-            <NavButton
-              icon={<BarChart3 className="w-5 h-5" />}
-              label="Graph Control"
-              isActive={activeSection === "graphs"}
-              onClick={() => onSectionChange("graphs")}
-            />
           </nav>
 
           {/* Footer */}
@@ -164,7 +158,6 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
                 {activeSection === "news" && "News Management"}
                 {activeSection === "scoreboard" && "Scoreboard Control"}
                 {activeSection === "fixtures" && "Fixtures Control"}
-                {activeSection === "graphs" && "Graph Control"}
               </h2>
               <div className="w-10" /> {/* Spacer for alignment */}
             </div>

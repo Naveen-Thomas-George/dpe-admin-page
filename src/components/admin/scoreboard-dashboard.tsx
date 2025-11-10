@@ -262,50 +262,52 @@ export function ScoreboardDashboard() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-white shadow-xl rounded-2xl border border-gray-200 font-inter">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-gray-800 flex items-center">
-          <span className="text-4xl mr-3">🏆</span> Score Control Dashboard
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto bg-white shadow-xl rounded-2xl border border-gray-200 font-inter">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
+          <span className="text-3xl sm:text-4xl mr-3">🏆</span>
+          <span className="hidden sm:inline">Score Control Dashboard</span>
+          <span className="sm:hidden">Dashboard</span>
         </h2>
-        <div className="flex gap-4">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4 w-full sm:w-auto">
           <button
             onClick={() => setShowAddSchool(!showAddSchool)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-sm sm:text-base"
           >
-            {showAddSchool ? 'Cancel' : '+ Add School'}
+            {showAddSchool ? 'Cancel' : '+ School'}
           </button>
           <button
             onClick={() => setShowAddScore(!showAddScore)}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-sm sm:text-base"
           >
-            {showAddScore ? 'Cancel' : '+ Add Score'}
+            {showAddScore ? 'Cancel' : '+ Score'}
           </button>
           <button
             onClick={() => setShowEditWinner(!showEditWinner)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-sm sm:text-base"
           >
-            {showEditWinner ? 'Cancel' : '✏️ Edit Winner'}
+            {showEditWinner ? 'Cancel' : '✏️ Edit'}
           </button>
           <button
             onClick={() => setShowDeleteWinner(!showDeleteWinner)}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-sm sm:text-base"
           >
-            {showDeleteWinner ? 'Cancel' : '🗑️ Delete Winner'}
+            {showDeleteWinner ? 'Cancel' : '🗑️ Delete'}
           </button>
           <button
             onClick={() => setShowDeleteSchool(!showDeleteSchool)}
-            className="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-red-800 hover:bg-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-sm sm:text-base col-span-2 sm:col-span-1"
           >
-            {showDeleteSchool ? 'Cancel' : '🏫 Delete School'}
+            {showDeleteSchool ? 'Cancel' : '🏫 School'}
           </button>
         </div>
       </div>
 
       {/* Add School Form */}
       {showAddSchool && (
-        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Add New School</h3>
-          <form onSubmit={handleAddSchool} className="flex gap-4">
+        <div className="mb-8 p-4 sm:p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">Add New School</h3>
+          <form onSubmit={handleAddSchool} className="flex flex-col sm:flex-row gap-4">
             <input
               type="text"
               placeholder="Enter school name"
@@ -337,8 +339,8 @@ export function ScoreboardDashboard() {
 
       {/* Edit Winner Form */}
       {showEditWinner && (
-        <div className="mb-8 p-6 bg-orange-50 border border-orange-200 rounded-lg">
-          <h3 className="text-xl font-bold text-orange-800 mb-4">✏️ Edit Winner</h3>
+        <div className="mb-8 p-4 sm:p-6 bg-orange-50 border border-orange-200 rounded-lg">
+          <h3 className="text-lg sm:text-xl font-bold text-orange-800 mb-4">✏️ Edit Winner</h3>
           <p className="text-orange-600 mb-4">Update winner information. All fields are required.</p>
           <form onSubmit={handleEditWinner} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -398,7 +400,7 @@ export function ScoreboardDashboard() {
                 required
               />
             </div>
-            <div className="md:col-span-2 flex gap-4">
+            <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
               <button
                 type="submit"
                 disabled={editLoading}
@@ -420,8 +422,8 @@ export function ScoreboardDashboard() {
 
       {/* Delete Winner Form */}
       {showDeleteWinner && (
-        <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-xl font-bold text-red-800 mb-4">⚠️ Delete Winner - Multi-Step Verification</h3>
+        <div className="mb-8 p-4 sm:p-6 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-lg sm:text-xl font-bold text-red-800 mb-4">⚠️ Delete Winner - Multi-Step Verification</h3>
           <p className="text-red-600 mb-4">Please provide ALL the following details to confirm deletion:</p>
           <form onSubmit={handleDeleteWinner} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -481,7 +483,7 @@ export function ScoreboardDashboard() {
                 required
               />
             </div>
-            <div className="md:col-span-2 flex gap-4">
+            <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
               <button
                 type="submit"
                 disabled={deleteLoading}
@@ -503,10 +505,10 @@ export function ScoreboardDashboard() {
 
       {/* Delete School Form */}
       {showDeleteSchool && (
-        <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-xl font-bold text-red-800 mb-4">⚠️ Delete School - Verification Required</h3>
+        <div className="mb-8 p-4 sm:p-6 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-lg sm:text-xl font-bold text-red-800 mb-4">⚠️ Delete School - Verification Required</h3>
           <p className="text-red-600 mb-4">⚠️ WARNING: This will permanently delete the school. The school must have NO associated scores to be deleted.</p>
-          <form onSubmit={handleDeleteSchool} className="flex gap-4">
+          <form onSubmit={handleDeleteSchool} className="flex flex-col sm:flex-row gap-4">
             <input
               type="text"
               placeholder="Enter exact school name to delete"
@@ -542,8 +544,8 @@ export function ScoreboardDashboard() {
 
       {/* Overall School Scores */}
       <div className="mb-8">
-        <h3 className="text-2xl font-bold text-gray-700 mb-4">Overall School Scores</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-700 mb-4">Overall School Scores</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {topSchools.map((school, index) => (
             <div
               key={school.school}
@@ -552,10 +554,10 @@ export function ScoreboardDashboard() {
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="text-lg font-bold">{school.school}</h4>
-                  <p className="text-2xl font-bold">{school.totalPoints} pts</p>
+                  <h4 className="text-base sm:text-lg font-bold">{school.school}</h4>
+                  <p className="text-xl sm:text-2xl font-bold">{school.totalPoints} pts</p>
                 </div>
-                <div className="text-4xl">
+                <div className="text-3xl sm:text-4xl">
                   {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}
                 </div>
               </div>
@@ -566,9 +568,9 @@ export function ScoreboardDashboard() {
 
       {/* Winners Carousel */}
       <div className="mb-8">
-        <h3 className="text-2xl font-bold text-gray-700 mb-4">Recent Winners</h3>
-        <div className="overflow-x-auto">
-          <div className="flex space-x-4 pb-4">
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-700 mb-4">Recent Winners</h3>
+        <div className="overflow-x-auto pb-4">
+          <div className="flex space-x-4 min-w-max">
             {recentWinners.map((winner, index) => (
               <div
                 key={index}
@@ -582,8 +584,8 @@ export function ScoreboardDashboard() {
                   ✏️
                 </button>
                 <div className="text-center">
-                  <div className="text-2xl mb-2">{winner.prize}</div>
-                  <div className="text-lg font-bold text-gray-800">{winner.name}</div>
+                  <div className="text-xl sm:text-2xl mb-2">{winner.prize}</div>
+                  <div className="text-base sm:text-lg font-bold text-gray-800">{winner.name}</div>
                   <div className="text-sm text-gray-600">{winner.event}</div>
                   <div className="text-sm font-semibold text-blue-600">{winner.school}</div>
                   {winner.chestNo && (
@@ -598,13 +600,13 @@ export function ScoreboardDashboard() {
 
       {/* Graph Modal */}
       {showGraph && selectedSchool && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 sm:p-6 rounded-lg max-w-4xl w-full max-h-96 overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-2xl font-bold">{selectedSchool} - Event Wins</h3>
+              <h3 className="text-lg sm:text-2xl font-bold">{selectedSchool} - Event Wins</h3>
               <button
                 onClick={closeGraph}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
+                className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl"
               >
                 ×
               </button>
