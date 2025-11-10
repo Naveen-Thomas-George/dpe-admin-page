@@ -17,6 +17,7 @@ interface Winner {
   chestNo?: string;
   position?: number;
   eventId?: string;
+  positionId?: string;
 }
 
 interface EventWins {
@@ -54,6 +55,19 @@ export function ScoreboardDashboard() {
     schoolName: '',
   });
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Edit states
+  const [showEditWinner, setShowEditWinner] = useState(false);
+  const [editWinnerData, setEditWinnerData] = useState({
+    eventId: '',
+    positionId: '',
+    chestNo: '',
+    studentName: '',
+    schoolName: '',
+    eventName: '',
+    position: '',
+  });
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     fetchScores();
@@ -189,6 +203,56 @@ export function ScoreboardDashboard() {
     }
   };
 
+  const handleEditWinner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditLoading(true);
+    setMessage({ text: '', type: '' });
+
+    try {
+      const response = await fetch('/api/edit-winner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editWinnerData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to edit winner');
+      }
+
+      setMessage({ text: data.message, type: 'success' });
+      setShowEditWinner(false);
+      setEditWinnerData({
+        eventId: '',
+        positionId: '',
+        chestNo: '',
+        studentName: '',
+        schoolName: '',
+        eventName: '',
+        position: '',
+      });
+      fetchScores(); // Refresh the data
+    } catch (err) {
+      setMessage({ text: `❌ ${err instanceof Error ? err.message : 'An error occurred'}`, type: 'error' });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const openEditWinner = (winner: Winner) => {
+    setEditWinnerData({
+      eventId: winner.eventId || '',
+      positionId: winner.positionId || `POS#${String(winner.position).padStart(2, '0')}`,
+      chestNo: winner.chestNo || '',
+      studentName: winner.name,
+      schoolName: winner.school,
+      eventName: winner.event,
+      position: String(winner.position || ''),
+    });
+    setShowEditWinner(true);
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
   }
@@ -215,6 +279,12 @@ export function ScoreboardDashboard() {
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
             {showAddScore ? 'Cancel' : '+ Add Score'}
+          </button>
+          <button
+            onClick={() => setShowEditWinner(!showEditWinner)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            {showEditWinner ? 'Cancel' : '✏️ Edit Winner'}
           </button>
           <button
             onClick={() => setShowDeleteWinner(!showDeleteWinner)}
@@ -262,6 +332,89 @@ export function ScoreboardDashboard() {
             setShowAddScore(false);
             fetchScores();
           }} />
+        </div>
+      )}
+
+      {/* Edit Winner Form */}
+      {showEditWinner && (
+        <div className="mb-8 p-6 bg-orange-50 border border-orange-200 rounded-lg">
+          <h3 className="text-xl font-bold text-orange-800 mb-4">✏️ Edit Winner</h3>
+          <p className="text-orange-600 mb-4">Update winner information. All fields are required.</p>
+          <form onSubmit={handleEditWinner} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Event Name</label>
+              <input
+                type="text"
+                placeholder="e.g., 100m Sprint Boys Final"
+                value={editWinnerData.eventName}
+                onChange={(e) => setEditWinnerData({...editWinnerData, eventName: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Position (1, 2, or 3)</label>
+              <input
+                type="number"
+                min="1"
+                max="3"
+                placeholder="1"
+                value={editWinnerData.position}
+                onChange={(e) => setEditWinnerData({...editWinnerData, position: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Chest Number</label>
+              <input
+                type="text"
+                placeholder="123"
+                value={editWinnerData.chestNo}
+                onChange={(e) => setEditWinnerData({...editWinnerData, chestNo: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={editWinnerData.studentName}
+                onChange={(e) => setEditWinnerData({...editWinnerData, studentName: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                required
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+              <input
+                type="text"
+                placeholder="School Name"
+                value={editWinnerData.schoolName}
+                onChange={(e) => setEditWinnerData({...editWinnerData, schoolName: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                required
+              />
+            </div>
+            <div className="md:col-span-2 flex gap-4">
+              <button
+                type="submit"
+                disabled={editLoading}
+                className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                {editLoading ? 'Updating...' : '✏️ Update Winner'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditWinner(false)}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -419,8 +572,15 @@ export function ScoreboardDashboard() {
             {recentWinners.map((winner, index) => (
               <div
                 key={index}
-                className="bg-gray-100 p-4 rounded-lg min-w-64 shadow-md hover:shadow-lg transition-shadow duration-300"
+                className="bg-gray-100 p-4 rounded-lg min-w-64 shadow-md hover:shadow-lg transition-shadow duration-300 relative"
               >
+                <button
+                  onClick={() => openEditWinner(winner)}
+                  className="absolute top-2 right-2 text-gray-500 hover:text-orange-600 text-lg"
+                  title="Edit Winner"
+                >
+                  ✏️
+                </button>
                 <div className="text-center">
                   <div className="text-2xl mb-2">{winner.prize}</div>
                   <div className="text-lg font-bold text-gray-800">{winner.name}</div>
