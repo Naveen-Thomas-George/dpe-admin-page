@@ -18,6 +18,7 @@ interface UserData {
     classSection?: string;
     deptShort?: string;
     gender?: string;
+    chestNo?: string;
     duplicateWarning?: string;
   };
   registeredEvents: Array<{
@@ -45,6 +46,12 @@ export function ScanTool() {
 
   const [manualClearId, setManualClearId] = useState<string>("");
   const [manualGmail, setManualGmail] = useState<string>("");
+  const [chestNumber, setChestNumber] = useState<string>("");
+  const [selectedEvent, setSelectedEvent] = useState<string>("");
+  const [isUpdatingChest, setIsUpdatingChest] = useState(false);
+  const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
+  const [chestUpdateMessage, setChestUpdateMessage] = useState<{ text: string; type: string }>({ text: '', type: '' });
+  const [attendanceMessage, setAttendanceMessage] = useState<{ text: string; type: string }>({ text: '', type: '' });
 
   useEffect(() => {
     setIsBrowserReady(true)
@@ -239,7 +246,85 @@ export function ScanTool() {
     resetData()
     setManualClearId("");
     setManualGmail("");
+    setChestNumber("");
+    setSelectedEvent("");
+    setChestUpdateMessage({ text: '', type: '' });
+    setAttendanceMessage({ text: '', type: '' });
   }
+
+  const handleUpdateChestNumber = async () => {
+    if (!scannedData || !chestNumber.trim()) {
+      setChestUpdateMessage({ text: 'Please scan a user and enter chest number', type: 'error' });
+      return;
+    }
+
+    setIsUpdatingChest(true);
+    setChestUpdateMessage({ text: '', type: '' });
+
+    try {
+      const response = await fetch('/api/update-chest-number', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clearId: scannedData,
+          chestNumber: chestNumber.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update chest number');
+      }
+
+      setChestUpdateMessage({ text: '✅ Chest number updated successfully!', type: 'success' });
+      // Refresh user data to show updated chest number
+      fetchUserData(scannedData);
+      setChestNumber("");
+    } catch (error) {
+      console.error('Chest number update error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update chest number';
+      setChestUpdateMessage({ text: `❌ ${errorMessage}`, type: 'error' });
+    } finally {
+      setIsUpdatingChest(false);
+    }
+  };
+
+  const handleMarkAttendance = async () => {
+    if (!scannedData || !selectedEvent) {
+      setAttendanceMessage({ text: 'Please scan a user and select an event', type: 'error' });
+      return;
+    }
+
+    setIsMarkingAttendance(true);
+    setAttendanceMessage({ text: '', type: '' });
+
+    try {
+      const response = await fetch('/api/mark-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clearId: scannedData,
+          eventId: selectedEvent,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to mark attendance');
+      }
+
+      setAttendanceMessage({ text: '✅ Attendance marked successfully!', type: 'success' });
+      // Refresh user data to show updated attendance
+      fetchUserData(scannedData);
+      setSelectedEvent("");
+    } catch (error) {
+      console.error('Attendance marking error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mark attendance';
+      setAttendanceMessage({ text: `❌ ${errorMessage}`, type: 'error' });
+    } finally {
+      setIsMarkingAttendance(false);
+    }
+  };
 
 
   const UserDetailsCard = () => (
@@ -331,6 +416,10 @@ export function ScanTool() {
                   <span className="font-semibold mr-2">Gender:</span>
                   <span>{userData.user.gender || 'N/A'}</span>
                 </div>
+                <div className="flex items-center">
+                  <span className="font-semibold mr-2">Chest No:</span>
+                  <span>{userData.user.chestNo || 'N/A'}</span>
+                </div>
                 <div className="col-span-2 flex items-center mt-2">
                   <span className="font-semibold mr-2">Gmail:</span>
                   <span className="font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">{userData.user.christGmail || 'N/A'}</span>
@@ -359,6 +448,64 @@ export function ScanTool() {
                 <div className="text-center py-6">
                   <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500 italic">No events found for this user.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Chest Number Update Section */}
+            <div className="pt-4 border-t border-gray-200">
+              <h5 className="text-lg font-semibold text-gray-800 mb-3">Update Chest Number</h5>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Enter chest number"
+                  value={chestNumber}
+                  onChange={(e) => setChestNumber(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleUpdateChestNumber}
+                  disabled={isUpdatingChest || !chestNumber.trim()}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isUpdatingChest ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                </Button>
+              </div>
+              {chestUpdateMessage.text && (
+                <div className={`mt-2 p-2 rounded text-sm ${chestUpdateMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {chestUpdateMessage.text}
+                </div>
+              )}
+            </div>
+
+            {/* Mark Attendance Section */}
+            <div className="pt-4 border-t border-gray-200">
+              <h5 className="text-lg font-semibold text-gray-800 mb-3">Mark Attendance</h5>
+              <div className="space-y-3">
+                <select
+                  value={selectedEvent}
+                  onChange={(e) => setSelectedEvent(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Select Event</option>
+                  {userData.registeredEvents.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {event.name} ({event.category})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  onClick={handleMarkAttendance}
+                  disabled={isMarkingAttendance || !selectedEvent}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  {isMarkingAttendance ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Mark Present
+                </Button>
+              </div>
+              {attendanceMessage.text && (
+                <div className={`mt-2 p-2 rounded text-sm ${attendanceMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {attendanceMessage.text}
                 </div>
               )}
             </div>
