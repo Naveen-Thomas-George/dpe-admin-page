@@ -29,6 +29,7 @@ export async function POST(req: Request) {
 
     let user;
     const isGmail = identifier.includes("@");
+    const isRegNumber = /^\d{8}$/.test(identifier); // Assuming reg numbers are 8 digits
 
     // --- 1️⃣ Gmail Lookup ---
     if (isGmail) {
@@ -53,7 +54,30 @@ export async function POST(req: Request) {
         user.duplicateWarning = `Found ${duplicateCount} users with this Gmail. Showing first match.`;
       }
 
-    // --- 2️⃣ CLEAR ID Lookup ---
+    // --- 2️⃣ Registration Number Lookup ---
+    } else if (isRegNumber) {
+      const scanCmd = new ScanCommand({
+        TableName: process.env.DYNAMODB_USER_TABLE || "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
+        FilterExpression: "regNumber = :regNumber",
+        ExpressionAttributeValues: {
+          ":regNumber": { S: identifier },
+        },
+      });
+
+      const scanResult = await client.send(scanCmd);
+
+      if (!scanResult.Items || scanResult.Items.length === 0) {
+        return NextResponse.json({ error: "User not found with this Registration Number" }, { status: 404 });
+      }
+
+      const duplicateCount = scanResult.Items.length;
+      user = unmarshall(scanResult.Items[0]);
+
+      if (duplicateCount > 1) {
+        user.duplicateWarning = `Found ${duplicateCount} users with this Registration Number. Showing first match.`;
+      }
+
+    // --- 3️⃣ CLEAR ID Lookup ---
     } else {
       const userCmd = new GetItemCommand({
         TableName: process.env.DYNAMODB_USER_TABLE || "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",

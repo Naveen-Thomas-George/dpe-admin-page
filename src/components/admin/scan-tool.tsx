@@ -46,6 +46,7 @@ export function ScanTool() {
 
   const [manualClearId, setManualClearId] = useState<string>("");
   const [manualGmail, setManualGmail] = useState<string>("");
+  const [manualRegNumber, setManualRegNumber] = useState<string>("");
   const [chestNumber, setChestNumber] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<string>("");
   const [isUpdatingChest, setIsUpdatingChest] = useState(false);
@@ -208,7 +209,19 @@ export function ScanTool() {
       resetData();
       setScannedData(manualGmail.trim());
       setDetectionStatus("detected");
-      setManualClearId(""); 
+      setManualClearId("");
+      setManualRegNumber("");
+    }
+  };
+
+  const handleManualRegNumberFetch = () => {
+    if (manualRegNumber.trim()) {
+      stopScanning();
+      resetData();
+      setScannedData(manualRegNumber.trim());
+      setDetectionStatus("detected");
+      setManualClearId("");
+      setManualGmail("");
     }
   };
 
@@ -246,6 +259,7 @@ export function ScanTool() {
     resetData()
     setManualClearId("");
     setManualGmail("");
+    setManualRegNumber("");
     setChestNumber("");
     setSelectedEvent("");
     setChestUpdateMessage({ text: '', type: '' });
@@ -668,11 +682,35 @@ export function ScanTool() {
                   </p>
               </div>
 
+              {/* Manual Input Section - REGISTRATION NUMBER FALLBACK */}
+              <div className="pt-6 border-t border-gray-200 space-y-3">
+                  <h4 className="text-lg font-bold text-gray-700">3. Fallback: Search by Registration Number</h4>
+                  <div className="flex gap-2">
+                      <Input
+                          type="text"
+                          placeholder="e.g., 22123456"
+                          value={manualRegNumber}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setManualRegNumber(e.target.value)}
+                          className="flex-1 p-3 border-gray-300"
+                          disabled={isScanning || isFetchingUser}
+                      />
+                      <Button
+                          onClick={handleManualRegNumberFetch}
+                          disabled={!manualRegNumber.trim() || isScanning || isFetchingUser}
+                          className="shrink-0 bg-green-600 hover:bg-green-700"
+                      >
+                          <Check className="w-4 h-4 mr-1" /> Reg No Fetch
+                      </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 italic">
+                      Note: Registration number search scans the entire table (expensive operation). Consider adding a GSI for better performance in production.
+                  </p>
+              </div>
+
               {/* Additional Fallbacks Section - For future expansion */}
               <div className="pt-6 border-t border-gray-200 space-y-3">
-                  <h4 className="text-lg font-bold text-gray-700">3. Additional Fallbacks (Coming Soon)</h4>
+                  <h4 className="text-lg font-bold text-gray-700">4. Additional Fallbacks (Coming Soon)</h4>
                   <div className="text-sm text-gray-600 space-y-2">
-                      <p>• <strong>Registration Number:</strong> Search by student reg number</p>
                       <p>• <strong>Full Name:</strong> Fuzzy search by student name</p>
                       <p>• <strong>Phone Number:</strong> Search by contact number</p>
                   </div>
