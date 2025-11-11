@@ -12,7 +12,7 @@ import { unmarshall } from "@aws-sdk/util-dynamodb";
  * AWS_SECRET_ACCESS_KEY=your_secret_key
  */
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION,
+  region: "eu-north-1",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
