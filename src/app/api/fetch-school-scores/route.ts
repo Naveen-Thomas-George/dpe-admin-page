@@ -37,17 +37,27 @@ export async function GET() {
     scores.forEach((score) => {
       const school = score.SchoolName;
       const event = score.EventName;
-      const position = score.Position;
+      const eventType = score.EventType || 'individual'; // Default to individual if not set
 
       if (!schoolScores[school]) {
         schoolScores[school] = { totalPoints: 0, wins: {} };
       }
 
-      // Points based on position (1st: 5, 2nd: 3, 3rd: 1)
       let points = 0;
-      if (position === 1) points = 5;
-      else if (position === 2) points = 3;
-      else if (position === 3) points = 1;
+      if (eventType === 'individual') {
+        // Use manual points if provided, else position-based
+        if (score.Points !== null && score.Points !== undefined) {
+          points = score.Points;
+        } else {
+          const position = score.Position;
+          if (position === 1) points = 5;
+          else if (position === 2) points = 3;
+          else if (position === 3) points = 1;
+        }
+      } else if (eventType === 'team') {
+        // For teams, always use the Points field
+        points = score.Points || 0;
+      }
 
       schoolScores[school].totalPoints += points;
 
@@ -73,17 +83,35 @@ export async function GET() {
 
     // Get recent winners for carousel (last 10 events)
     const recentWinners = scores
+      .filter(score => score.PositionID !== 'METADATA') // Exclude metadata entries
       .sort((a, b) => new Date(b.RecordedAt).getTime() - new Date(a.RecordedAt).getTime())
       .slice(0, 10)
-      .map(score => ({
-        prize: score.Position === 1 ? '🥇 1st Place' : score.Position === 2 ? '🥈 2nd Place' : '🥉 3rd Place',
-        name: score.StudentName,
-        event: score.EventName,
-        school: score.SchoolName,
-        chestNo: score.ChestNo,
-        position: score.Position,
-        eventId: score.EventID,
-      }));
+      .map(score => {
+        const eventType = score.EventType || 'individual';
+        let prize = '';
+        let name = '';
+        let position = score.Position;
+
+        if (eventType === 'individual') {
+          prize = score.Position === 1 ? '🥇 1st Place' : score.Position === 2 ? '🥈 2nd Place' : '🥉 3rd Place';
+          name = score.StudentName;
+        } else if (eventType === 'team') {
+          prize = `🏆 Team (${score.Points} pts)`;
+          name = score.TeamName;
+          position = undefined; // Teams don't have positions
+        }
+
+        return {
+          prize,
+          name,
+          event: score.EventName,
+          school: score.SchoolName,
+          chestNo: score.ChestNo,
+          position,
+          eventId: score.EventID,
+          positionId: score.PositionID,
+        };
+      });
 
     return NextResponse.json({
       overallScore: schoolScores,

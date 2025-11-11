@@ -39,19 +39,37 @@ export async function POST(request: Request) {
     const eventId = createEventID(eventName);
     const positionId = `POS#${String(position).padStart(2, '0')}`;
 
-    // Delete the winner record
+    // First, query to find the exact item to delete (since we need to match all attributes)
+    const { QueryCommand } = await import("@aws-sdk/lib-dynamodb");
+    const queryCommand = new QueryCommand({
+      TableName: SCORE_TABLE,
+      KeyConditionExpression: "EventID = :eventId AND PositionID = :positionId",
+      FilterExpression: "ChestNo = :chestNo AND StudentName = :studentName AND SchoolName = :schoolName",
+      ExpressionAttributeValues: {
+        ":eventId": eventId,
+        ":positionId": positionId,
+        ":chestNo": chestNo,
+        ":studentName": studentName,
+        ":schoolName": schoolName,
+      },
+    });
+
+    const queryResponse = await docClient.send(queryCommand);
+    const items = queryResponse.Items || [];
+
+    if (items.length === 0) {
+      return NextResponse.json(
+        { error: "Winner record not found or details don't match. Please verify the information." },
+        { status: 404 }
+      );
+    }
+
+    // Delete the winner record using the exact key
     const deleteCommand = new DeleteCommand({
       TableName: SCORE_TABLE,
       Key: {
         EventID: eventId,
         PositionID: positionId,
-      },
-      // Add condition to ensure we're deleting the correct record
-      ConditionExpression: "ChestNo = :chestNo AND StudentName = :studentName AND SchoolName = :schoolName",
-      ExpressionAttributeValues: {
-        ":chestNo": chestNo,
-        ":studentName": studentName,
-        ":schoolName": schoolName,
       },
     });
 
@@ -64,14 +82,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Error deleting winner:", error);
-
-    // Handle conditional check failed (record doesn't match)
-    if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
-      return NextResponse.json(
-        { error: "Winner record not found or details don't match. Please verify the information." },
-        { status: 404 }
-      );
-    }
 
     const errorMessage = error instanceof Error ? error.message : "Failed to delete winner";
     return NextResponse.json({ error: errorMessage }, { status: 500 });

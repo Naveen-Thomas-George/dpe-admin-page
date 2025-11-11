@@ -23,6 +23,13 @@ type WinnerEntry = {
   chestNo: string;
   name: string;
   school: string;
+  points?: number;
+};
+
+type TeamEntry = {
+  teamName: string;
+  school: string;
+  points: number;
 };
 
 /**
@@ -47,59 +54,104 @@ const createEventID = (eventName: string): string => {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { eventName, winners } = body as { eventName: string, winners: WinnerEntry[] };
+        const { eventType, eventName, winners, teamEntry } = body as {
+            eventType: 'individual' | 'team';
+            eventName: string;
+            winners?: WinnerEntry[];
+            teamEntry?: TeamEntry;
+        };
 
         // --- Validation ---
-        if (!eventName || !winners || !Array.isArray(winners) || winners.length === 0) {
-            return NextResponse.json({ error: "Invalid data: Event name and winners array are required." }, { status: 400 });
+        if (!eventType || !eventName) {
+            return NextResponse.json({ error: "Invalid data: Event type and event name are required." }, { status: 400 });
         }
 
         const eventId = createEventID(eventName);
         const timestamp = new Date().toISOString();
 
-        // --- Prepare DynamoDB Batch Write ---
-        // We will write one item for each winner, plus one "METADATA" item for the event itself.
+        let allPutRequests: any[] = [];
 
-        // 1. Create PutRequest for each winner
-        const winnerPutRequests = winners.map(winner => ({
-            PutRequest: {
-                Item: {
-                    EventID: eventId,                             // PK: Partition Key
-                    PositionID: `POS#${String(winner.position).padStart(2, '0')}`, // SK: Sort Key (e.g., POS#01, POS#02)
-                    EventName: eventName.trim(),                  // Raw event name for display
-                    Position: winner.position,
-                    ChestNo: winner.chestNo.trim(),
-                    StudentName: winner.name.trim(),
-                    SchoolName: winner.school.trim(),
-                    RecordedAt: timestamp,
-                }
+        if (eventType === 'individual') {
+            if (!winners || !Array.isArray(winners) || winners.length === 0) {
+                return NextResponse.json({ error: "Invalid data: Winners array is required for individual events." }, { status: 400 });
             }
-        }));
 
-        // 2. Create PutRequest for the event metadata
-        const metadataPutRequest = {
-             PutRequest: {
-                 Item: {
-                     EventID: eventId,        // PK
-                     PositionID: "METADATA",  // SK
-                     EventName: eventName.trim(),
-                     RecordedAt: timestamp,
-                     TotalWinnersRecorded: winners.length,
-                     // You could add more metadata here, like the judge's name if passed from the client
+            // 1. Create PutRequest for each winner
+            const winnerPutRequests = winners.map(winner => ({
+                PutRequest: {
+                    Item: {
+                        EventID: eventId,                             // PK: Partition Key
+                        PositionID: `POS#${String(winner.position).padStart(2, '0')}`, // SK: Sort Key (e.g., POS#01, POS#02)
+                        EventName: eventName.trim(),                  // Raw event name for display
+                        EventType: 'individual',
+                        Position: winner.position,
+                        ChestNo: winner.chestNo.trim(),
+                        StudentName: winner.name.trim(),
+                        SchoolName: winner.school.trim(),
+                        Points: winner.points || null, // Manual points if provided
+                        RecordedAt: timestamp,
+                    }
+                }
+            }));
+
+            // 2. Create PutRequest for the event metadata
+            const metadataPutRequest = {
+                 PutRequest: {
+                     Item: {
+                         EventID: eventId,        // PK
+                         PositionID: "METADATA",  // SK
+                         EventName: eventName.trim(),
+                         EventType: 'individual',
+                         RecordedAt: timestamp,
+                         TotalWinnersRecorded: winners.length,
+                     }
                  }
-             }
-        };
+            };
 
-        const allPutRequests = [metadataPutRequest, ...winnerPutRequests];
+            allPutRequests = [metadataPutRequest, ...winnerPutRequests];
+        } else if (eventType === 'team') {
+            if (!teamEntry) {
+                return NextResponse.json({ error: "Invalid data: Team entry is required for team events." }, { status: 400 });
+            }
+
+            // Create PutRequest for team entry
+            const teamPutRequest = {
+                PutRequest: {
+                    Item: {
+                        EventID: eventId,                             // PK: Partition Key
+                        PositionID: "TEAM#01",                        // SK: Sort Key for team
+                        EventName: eventName.trim(),                  // Raw event name for display
+                        EventType: 'team',
+                        TeamName: teamEntry.teamName.trim(),
+                        SchoolName: teamEntry.school.trim(),
+                        Points: teamEntry.points,
+                        RecordedAt: timestamp,
+                    }
+                }
+            };
+
+            // Metadata for team event
+            const metadataPutRequest = {
+                 PutRequest: {
+                     Item: {
+                         EventID: eventId,        // PK
+                         PositionID: "METADATA",  // SK
+                         EventName: eventName.trim(),
+                         EventType: 'team',
+                         RecordedAt: timestamp,
+                         TotalTeamsRecorded: 1,
+                     }
+                 }
+            };
+
+            allPutRequests = [metadataPutRequest, teamPutRequest];
+        } else {
+            return NextResponse.json({ error: "Invalid event type." }, { status: 400 });
+        }
 
         // DynamoDB BatchWriteCommand has a limit of 25 items.
-        // If you might have more than 24 winners (e.g., team event), you'd need to loop.
-        // For 3 positions, we are well within the limit.
         if (allPutRequests.length > 25) {
-            // Handle chunking if necessary, though unlikely for this use case
-            console.warn("More than 25 items, chunking logic would be needed.");
-            // For now, just error if it's too large
-             return NextResponse.json({ error: "Cannot save: Too many entries at once." }, { status: 413 });
+            return NextResponse.json({ error: "Cannot save: Too many entries at once." }, { status: 413 });
         }
 
         // --- Execute the Command ---
@@ -111,10 +163,9 @@ export async function POST(request: Request) {
 
         const response = await docClient.send(command);
 
-        // Check for unprocessed items (e.g., if DynamoDB throttles the request)
+        // Check for unprocessed items
         if (response.UnprocessedItems && response.UnprocessedItems[TABLE_NAME] && response.UnprocessedItems[TABLE_NAME].length > 0) {
             console.warn("DynamoDB unprocessed items:", response.UnprocessedItems[TABLE_NAME]);
-            // Here you would typically implement a retry logic for the unprocessed items
             return NextResponse.json({ error: "Partial failure: Some items were not saved. Please try again." }, { status: 500 });
         }
 
