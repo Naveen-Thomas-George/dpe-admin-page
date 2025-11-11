@@ -474,7 +474,7 @@ export function ScanTool() {
                   type="text"
                   placeholder="Enter chest number (3-4 digits)"
                   value={chestNumber}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const input = e.target.value;
                     // Only allow digits, max 4 characters
                     const digitsOnly = input.replace(/\D/g, '').slice(0, 4);
