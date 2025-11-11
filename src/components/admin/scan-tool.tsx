@@ -475,25 +475,16 @@ export function ScanTool() {
                   placeholder="Enter chest number (3-4 digits)"
                   value={chestNumber}
                   onChange={(e) => {
-                    // Allow any input first, then filter
-                    const rawValue = e.target.value;
-                    const filteredValue = rawValue.replace(/\D/g, ''); // Only allow digits
-                    if (filteredValue.length <= 4) {
-                      setChestNumber(filteredValue);
-                    }
+                    const input = e.target.value;
+                    // Only allow digits, max 4 characters
+                    const digitsOnly = input.replace(/\D/g, '').slice(0, 4);
+                    setChestNumber(digitsOnly);
                   }}
                   onFocus={(e) => e.target.select()} // Select all text when focused
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && chestNumber.trim()) {
                       handleUpdateChestNumber();
                     }
-                  }}
-                  onPaste={(e) => {
-                    // Allow paste but filter content
-                    e.preventDefault();
-                    const pasteData = e.clipboardData.getData('text');
-                    const filteredData = pasteData.replace(/\D/g, '').slice(0, 4);
-                    setChestNumber(filteredData);
                   }}
                   className="flex-1"
                   maxLength={4}
