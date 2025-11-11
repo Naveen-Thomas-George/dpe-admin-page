@@ -466,6 +466,7 @@ export function ScanTool() {
                       setChestNumber(value);
                     }
                   }}
+                  onFocus={(e) => e.target.select()} // Select all text when focused
                   className="flex-1"
                   maxLength={4}
                 />

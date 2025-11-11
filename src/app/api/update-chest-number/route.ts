@@ -67,6 +67,8 @@ export async function POST(req: Request) {
 
     await client.send(updateCmd);
 
+    console.log("Chest number updated successfully for user", clearId, "to", chestNumber); // Debug log
+
     return NextResponse.json(
       { message: "Chest number updated successfully" },
       { status: 200 }

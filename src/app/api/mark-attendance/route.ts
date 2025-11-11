@@ -78,6 +78,8 @@ export async function POST(req: Request) {
 
     await client.send(putCmd);
 
+    console.log("Attendance marked successfully for user", clearId, "event", eventId); // Debug log
+
     return NextResponse.json(
       { message: "Attendance marked successfully" },
       { status: 200 }

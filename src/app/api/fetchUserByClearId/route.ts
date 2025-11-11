@@ -69,10 +69,10 @@ export async function POST(req: Request) {
     }
 
     // --- 3️⃣ Fetch Event Registrations ---
-    const eventCmd = new QueryCommand({
+    // For now, let's scan the table instead of using GSI since we don't know the exact GSI name
+    const eventCmd = new ScanCommand({
       TableName: process.env.DYNAMODB_EVENT_TABLE || "IndividualRegistration-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
-      IndexName: "gsi-User.individualRegistrations", // Update this to match your actual GSI name
-      KeyConditionExpression: "playerClearId = :id",
+      FilterExpression: "playerClearId = :id",
       ExpressionAttributeValues: {
         ":id": { S: user.clearId },
       },
@@ -80,6 +80,8 @@ export async function POST(req: Request) {
 
     const eventData = await client.send(eventCmd);
     const events = eventData.Items ? eventData.Items.map((i) => unmarshall(i)) : [];
+
+    console.log("Fetched events for user", user.clearId, ":", events); // Debug log
 
     // --- 4️⃣ Map Events with Names & IDs ---
     const eventList = [
