@@ -458,10 +458,16 @@ export function ScanTool() {
               <div className="flex gap-2">
                 <Input
                   type="text"
-                  placeholder="Enter chest number"
+                  placeholder="Enter chest number (3-4 digits)"
                   value={chestNumber}
-                  onChange={(e) => setChestNumber(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                    if (value.length <= 4) {
+                      setChestNumber(value);
+                    }
+                  }}
                   className="flex-1"
+                  maxLength={4}
                 />
                 <Button
                   onClick={handleUpdateChestNumber}

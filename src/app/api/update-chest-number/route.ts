@@ -30,6 +30,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate chest number format (3-4 digits)
+    if (!/^\d{3,4}$/.test(chestNumber)) {
+      return NextResponse.json(
+        { message: "Chest number must be 3-4 digits only" },
+        { status: 400 }
+      );
+    }
+
     // 1️⃣ Check if the Clear ID exists
     const getCmd = new GetItemCommand({
       TableName: "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE",
