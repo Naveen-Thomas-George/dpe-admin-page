@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     let user;
     const isGmail = identifier.includes("@");
-    const isRegNumber = /^\d{8}$/.test(identifier); // Assuming reg numbers are 8 digits
+    const isRegNumber = /^\d{7,9}$/.test(identifier); // Registration numbers can be 7-9 digits
 
     // --- 1️⃣ Gmail Lookup ---
     if (isGmail) {

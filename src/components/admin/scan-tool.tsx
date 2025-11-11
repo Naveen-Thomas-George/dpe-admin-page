@@ -688,7 +688,7 @@ export function ScanTool() {
                   <div className="flex gap-2">
                       <Input
                           type="text"
-                          placeholder="e.g., 22123456"
+                          placeholder="e.g., 22123456 (7-9 digits)"
                           value={manualRegNumber}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setManualRegNumber(e.target.value)}
                           className="flex-1 p-3 border-gray-300"
