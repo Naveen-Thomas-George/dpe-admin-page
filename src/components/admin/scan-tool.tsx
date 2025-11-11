@@ -481,8 +481,14 @@ export function ScanTool() {
                     }
                   }}
                   onFocus={(e) => e.target.select()} // Select all text when focused
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && chestNumber.trim()) {
+                      handleUpdateChestNumber();
+                    }
+                  }}
                   className="flex-1"
                   maxLength={4}
+                  autoComplete="off"
                 />
                 <Button
                   onClick={handleUpdateChestNumber}
