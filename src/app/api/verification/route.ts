@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand, UpdateCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
 
 const client = new DynamoDBClient({
@@ -11,156 +11,234 @@ const client = new DynamoDBClient({
 });
 
 const docClient = DynamoDBDocumentClient.from(client);
-const USER_TABLE = "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE";
-const REGISTRATION_TABLE = "IndividualRegistration-ao7ebzdnjvahrhfgmey6i6vzfu-NONE";
+const USER_TABLE = "User-3q2hnhg4gnhg7jhx7qgk4x4ge-NONE"; // User table
+const EVENT_TABLE = "Event-3q2hnhg4gnhg7jhx7qgk4x4ge-NONE"; // Event registration table
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, eventId, searchCriteria } = body;
+    const { action, eventId, clearId, chestNumber, attendance, searchCriteria } = body;
 
-    if (action === 'search') {
-      // Search users by event and criteria
-      const { type, value } = searchCriteria || {};
+    switch (action) {
+      case 'search': {
+        if (!eventId) {
+          return NextResponse.json({ error: "Event ID is required" }, { status: 400 });
+        }
 
-      // First get all registrations for the event
-      const registrationScan = new ScanCommand({
-        TableName: REGISTRATION_TABLE,
-        FilterExpression: 'EventID = :eventId',
-        ExpressionAttributeValues: {
-          ':eventId': eventId,
-        },
-      });
+        // Query users registered for the event from EVENT_TABLE
+        const eventQuery = new QueryCommand({
+          TableName: EVENT_TABLE,
+          KeyConditionExpression: 'EventID = :eventId',
+          ExpressionAttributeValues: {
+            ':eventId': eventId,
+          },
+        });
 
-      const registrations = await docClient.send(registrationScan);
-      const clearIds = registrations.Items?.map(item => item.PlayerClearID) || [];
+        const eventResult = await docClient.send(eventQuery);
+        const registrations = eventResult.Items || [];
 
-      if (clearIds.length === 0) {
-        return NextResponse.json({ users: [] });
+        // Get unique registration numbers and emails to find users
+        const uniqueIdentifiers = new Set();
+        registrations.forEach(reg => {
+          if (reg.RegNumber) uniqueIdentifiers.add(`reg:${reg.RegNumber}`);
+          if (reg.ChristGmail) uniqueIdentifiers.add(`email:${reg.ChristGmail}`);
+        });
+
+        // Get all users that match the identifiers
+        const users = [];
+        for (const identifier of uniqueIdentifiers) {
+          const identifierStr = identifier as string;
+          const [type, value] = identifierStr.split(':');
+          let queryCommand;
+
+          if (type === 'reg') {
+            queryCommand = new ScanCommand({
+              TableName: USER_TABLE,
+              FilterExpression: 'RegNumber = :value',
+              ExpressionAttributeValues: {
+                ':value': value,
+              },
+            });
+          } else {
+            queryCommand = new ScanCommand({
+              TableName: USER_TABLE,
+              FilterExpression: 'ChristGmail = :value',
+              ExpressionAttributeValues: {
+                ':value': value,
+              },
+            });
+          }
+
+          const userResult = await docClient.send(queryCommand);
+          users.push(...(userResult.Items || []));
+        }
+
+        // Remove duplicates based on ClearID
+        const uniqueUsers = users.reduce((acc: any[], user: any) => {
+          if (!acc.find((u: any) => u.ClearID === user.ClearID)) {
+            acc.push(user);
+          }
+          return acc;
+        }, []);
+
+        // Get attendance and chest number for each user from EVENT_TABLE
+        const usersWithDetails = uniqueUsers.map((user: any) => {
+          // Check if user is registered for this specific event
+          const userRegistration = registrations.find((reg: any) =>
+            reg.ClearID === user.ClearID ||
+            (reg.RegNumber === user.RegNumber && reg.ChristGmail === user.ChristGmail)
+          );
+
+          return {
+            clearId: user.ClearID,
+            fullName: user.FullName,
+            regNumber: user.RegNumber,
+            christGmail: user.ChristGmail,
+            attendance: userRegistration?.Attendance || false,
+            chestNo: userRegistration?.ChestNo || '',
+            duplicates: user.Duplicates || 0,
+            isRegistered: !!userRegistration, // Only show if registered for this event
+          };
+        }).filter((user: any) => user.isRegistered); // Only return users registered for this event
+
+        return NextResponse.json({ users: usersWithDetails });
       }
 
-      // Get user details for these clearIds
-      const userPromises = clearIds.map(async (clearId) => {
-        const userScan = new ScanCommand({
+      case 'markAttendance': {
+        if (!clearId || !eventId || attendance == null) {
+          return NextResponse.json({ error: "ClearID, EventID, and attendance are required" }, { status: 400 });
+        }
+
+        // Update attendance in EVENT_TABLE
+        const updateCommand = new UpdateCommand({
+          TableName: EVENT_TABLE,
+          Key: {
+            EventID: eventId,
+            ClearID: clearId,
+          },
+          UpdateExpression: 'SET Attendance = :attendance, RecordedAt = :recordedAt',
+          ExpressionAttributeValues: {
+            ':attendance': attendance,
+            ':recordedAt': new Date().toISOString(),
+          },
+          ReturnValues: 'ALL_NEW',
+        });
+
+        await docClient.send(updateCommand);
+
+        // Also update attendance for duplicates
+        // Find all users with same reg number or email
+        const userQuery = new QueryCommand({
           TableName: USER_TABLE,
-          FilterExpression: 'ClearID = :clearId',
+          KeyConditionExpression: 'ClearID = :clearId',
           ExpressionAttributeValues: {
             ':clearId': clearId,
           },
         });
-        return await docClient.send(userScan);
-      });
 
-      const userResults = await Promise.all(userPromises);
-      let users = userResults.flatMap(result => result.Items || []);
+        const userResult = await docClient.send(userQuery);
+        const user = userResult.Items?.[0];
 
-      // Apply search filter if searchCriteria is provided
-      if (searchCriteria && type && value) {
-        if (type === 'regNumber') {
-          users = users.filter(user => user.RegNumber?.toLowerCase().includes(value.toLowerCase()));
-        } else if (type === 'gmail') {
-          users = users.filter(user => user.ChristGmail?.toLowerCase().includes(value.toLowerCase()));
-        } else if (type === 'name') {
-          users = users.filter(user => user.FullName?.toLowerCase().includes(value.toLowerCase()));
+        if (user) {
+          // Find all registrations for this user across all events
+          const allRegistrationsQuery = new ScanCommand({
+            TableName: EVENT_TABLE,
+            FilterExpression: 'RegNumber = :regNumber OR ChristGmail = :email',
+            ExpressionAttributeValues: {
+              ':regNumber': user.RegNumber,
+              ':email': user.ChristGmail,
+            },
+          });
+
+          const allRegistrations = await docClient.send(allRegistrationsQuery);
+          const duplicateRegistrations = allRegistrations.Items?.filter(reg => reg.ClearID !== clearId) || [];
+
+          // Update attendance for all duplicates
+          for (const reg of duplicateRegistrations) {
+            const duplicateUpdateCommand = new UpdateCommand({
+              TableName: EVENT_TABLE,
+              Key: {
+                EventID: reg.EventID,
+                ClearID: reg.ClearID,
+              },
+              UpdateExpression: 'SET Attendance = :attendance, RecordedAt = :recordedAt',
+              ExpressionAttributeValues: {
+                ':attendance': attendance,
+                ':recordedAt': new Date().toISOString(),
+              },
+            });
+
+            await docClient.send(duplicateUpdateCommand);
+          }
         }
+
+        return NextResponse.json({ success: true });
       }
 
-      // Group by ClearID to handle duplicates
-      const groupedUsers = users.reduce((acc, user) => {
-        const clearId = user.ClearID;
-        if (!acc[clearId]) {
-          acc[clearId] = {
-            clearId,
-            fullName: user.FullName,
-            schoolShort: user.SchoolShort,
-            regNumber: user.RegNumber,
-            christGmail: user.ChristGmail,
-            educationLevel: user.EducationLevel,
-            classSection: user.ClassSection,
-            deptShort: user.DeptShort,
-            gender: user.Gender,
-            chestNo: user.ChestNo,
-            attendance: user.Attendance || false,
-            duplicates: 1
-          };
-        } else {
-          acc[clearId].duplicates += 1;
+      case 'assignChestNumber': {
+        if (!chestNumber) {
+          return NextResponse.json({ error: "Chest number is required" }, { status: 400 });
         }
-        return acc;
-      }, {} as Record<string, any>);
 
-      return NextResponse.json({ users: Object.values(groupedUsers) });
+        // Find user by reg number or gmail (since chest number is global)
+        let userQuery;
+        if (clearId) {
+          // If clearId provided, use it directly
+          userQuery = new QueryCommand({
+            TableName: USER_TABLE,
+            KeyConditionExpression: 'ClearID = :clearId',
+            ExpressionAttributeValues: {
+              ':clearId': clearId,
+            },
+          });
+        } else {
+          return NextResponse.json({ error: "ClearID is required for chest number assignment" }, { status: 400 });
+        }
 
-    } else if (action === 'markAttendance') {
-      const { clearId, eventId, attendance } = body;
+        const userResult = await docClient.send(userQuery);
+        const user = userResult.Items?.[0];
 
-      // Update attendance in registration table
-      const registrationScan = new ScanCommand({
-        TableName: REGISTRATION_TABLE,
-        FilterExpression: 'PlayerClearID = :clearId AND EventID = :eventId',
-        ExpressionAttributeValues: {
-          ':clearId': clearId,
-          ':eventId': eventId,
-        },
-      });
+        if (!user) {
+          return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
 
-      const registrationResult = await docClient.send(registrationScan);
-      const registrations = registrationResult.Items || [];
-
-      // Update attendance for all matching registrations
-      const updatePromises = registrations.map(registration =>
-        docClient.send(new UpdateCommand({
-          TableName: REGISTRATION_TABLE,
-          Key: {
-            id: registration.id, // Assuming 'id' is the primary key
-          },
-          UpdateExpression: 'SET Attendance = :attendance, AttendanceUpdatedAt = :timestamp',
+        // Update chest number for all registrations of this user (by reg number or email)
+        const allRegistrationsQuery = new ScanCommand({
+          TableName: EVENT_TABLE,
+          FilterExpression: 'RegNumber = :regNumber OR ChristGmail = :email',
           ExpressionAttributeValues: {
-            ':attendance': attendance,
-            ':timestamp': new Date().toISOString(),
+            ':regNumber': user.RegNumber,
+            ':email': user.ChristGmail,
           },
-        }))
-      );
+        });
 
-      await Promise.all(updatePromises);
+        const allRegistrations = await docClient.send(allRegistrationsQuery);
+        const userRegistrations = allRegistrations.Items || [];
 
-      return NextResponse.json({ success: true, updatedCount: registrations.length });
+        // Update chest number for all registrations
+        for (const reg of userRegistrations) {
+          const updateCommand = new UpdateCommand({
+            TableName: EVENT_TABLE,
+            Key: {
+              EventID: reg.EventID,
+              ClearID: reg.ClearID,
+            },
+            UpdateExpression: 'SET ChestNo = :chestNo, RecordedAt = :recordedAt',
+            ExpressionAttributeValues: {
+              ':chestNo': chestNumber,
+              ':recordedAt': new Date().toISOString(),
+            },
+          });
 
-    } else if (action === 'assignChestNumber') {
-      const { clearId, chestNumber } = body;
+          await docClient.send(updateCommand);
+        }
 
-      // Update chest number for all duplicate entries in user table
-      const userScan = new ScanCommand({
-        TableName: USER_TABLE,
-        FilterExpression: 'ClearID = :clearId',
-        ExpressionAttributeValues: {
-          ':clearId': clearId,
-        },
-      });
+        return NextResponse.json({ success: true, updatedCount: userRegistrations.length });
+      }
 
-      const userResult = await docClient.send(userScan);
-      const users = userResult.Items || [];
-
-      const updatePromises = users.map(user =>
-        docClient.send(new UpdateCommand({
-          TableName: USER_TABLE,
-          Key: {
-            ClearID: user.ClearID,
-          },
-          UpdateExpression: 'SET ChestNo = :chestNo, ChestNoUpdatedAt = :timestamp',
-          ExpressionAttributeValues: {
-            ':chestNo': chestNumber,
-            ':timestamp': new Date().toISOString(),
-          },
-        }))
-      );
-
-      await Promise.all(updatePromises);
-
-      return NextResponse.json({ success: true, updatedCount: users.length });
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
-
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
   } catch (error: any) {
     console.error("Verification API error:", error);

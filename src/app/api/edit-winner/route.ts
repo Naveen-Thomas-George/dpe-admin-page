@@ -23,7 +23,8 @@ export async function POST(request: Request) {
       newStudentName,
       newSchoolName,
       newEventName,
-      newPosition
+      newPosition,
+      newPoints
     } = body;
 
     // Validation
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Event ID and Position ID are required" }, { status: 400 });
     }
 
-    if (!newChestNo?.trim() || !newStudentName?.trim() || !newSchoolName?.trim() || !newEventName?.trim() || !newPosition) {
+    if (!newChestNo?.trim() || !newStudentName?.trim() || !newSchoolName?.trim() || !newEventName?.trim() || newPosition == null) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
           SchoolName = :schoolName,
           EventName = :eventName,
           Position = :position,
+          Points = :points,
           #eventId = :eventId,
           #positionId = :positionId,
           RecordedAt = :recordedAt
@@ -102,6 +104,7 @@ export async function POST(request: Request) {
         ':schoolName': newSchoolName.trim(),
         ':eventName': newEventName.trim(),
         ':position': newPosition,
+        ':points': newPoints != null ? newPoints : (newPosition === 1 ? 5 : newPosition === 2 ? 3 : newPosition === 3 ? 1 : 0),
         ':eventId': newEventId,
         ':positionId': newPositionId,
         ':recordedAt': new Date().toISOString(),

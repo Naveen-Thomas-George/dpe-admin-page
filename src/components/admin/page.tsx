@@ -161,9 +161,9 @@ export default function VerificationPage() {
       });
 
       if (response.ok) {
-        // Update local state
+        // Update local state - mark attendance for user and their duplicates
         setUsers(users.map(user =>
-          user.clearId === clearId ? { ...user, attendance } : user
+          user.clearId === clearId || (user.duplicates && Array.isArray(user.duplicates) && user.duplicates.includes(clearId)) ? { ...user, attendance } : user
         ));
       }
     } catch (error) {
@@ -362,6 +362,7 @@ export default function VerificationPage() {
                       <TableHead>Christ Gmail</TableHead>
                       <TableHead>Attendance</TableHead>
                       <TableHead>Chest Number</TableHead>
+                      <TableHead>Duplicates</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -399,6 +400,9 @@ export default function VerificationPage() {
                             className="w-20"
                             maxLength={4}
                           />
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{user.duplicates}</Badge>
                         </TableCell>
                       </TableRow>
                     ))}
