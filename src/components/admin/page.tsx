@@ -61,7 +61,7 @@ export default function VerificationPage() {
   };
 
   const handleSearch = async () => {
-    if (!selectedEvent || !searchValue.trim()) return;
+    if (!selectedEvent) return;
 
     setSearching(true);
     try {
@@ -71,10 +71,10 @@ export default function VerificationPage() {
         body: JSON.stringify({
           action: 'search',
           eventId: selectedEvent,
-          searchCriteria: {
+          searchCriteria: searchValue.trim() ? {
             type: searchType,
             value: searchValue.trim(),
-          },
+          } : null, // If no search value, pass null to get all users for the event
         }),
       });
 
@@ -203,10 +203,10 @@ export default function VerificationPage() {
               <div className="flex items-end">
                 <Button
                   onClick={handleSearch}
-                  disabled={!selectedEvent || !searchValue.trim() || searching}
+                  disabled={!selectedEvent || searching}
                   className="w-full"
                 >
-                  {searching ? 'Searching...' : 'Search'}
+                  {searching ? 'Searching...' : searchValue.trim() ? 'Search' : 'Load All Participants'}
                 </Button>
               </div>
             </div>

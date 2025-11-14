@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     if (action === 'search') {
       // Search users by event and criteria
-      const { type, value } = searchCriteria;
+      const { type, value } = searchCriteria || {};
 
       // First get all registrations for the event
       const registrationScan = new ScanCommand({
@@ -54,13 +54,15 @@ export async function POST(request: Request) {
       const userResults = await Promise.all(userPromises);
       let users = userResults.flatMap(result => result.Items || []);
 
-      // Apply search filter
-      if (type === 'regNumber') {
-        users = users.filter(user => user.RegNumber?.toLowerCase().includes(value.toLowerCase()));
-      } else if (type === 'gmail') {
-        users = users.filter(user => user.ChristGmail?.toLowerCase().includes(value.toLowerCase()));
-      } else if (type === 'name') {
-        users = users.filter(user => user.FullName?.toLowerCase().includes(value.toLowerCase()));
+      // Apply search filter if searchCriteria is provided
+      if (searchCriteria && type && value) {
+        if (type === 'regNumber') {
+          users = users.filter(user => user.RegNumber?.toLowerCase().includes(value.toLowerCase()));
+        } else if (type === 'gmail') {
+          users = users.filter(user => user.ChristGmail?.toLowerCase().includes(value.toLowerCase()));
+        } else if (type === 'name') {
+          users = users.filter(user => user.FullName?.toLowerCase().includes(value.toLowerCase()));
+        }
       }
 
       // Group by ClearID to handle duplicates
