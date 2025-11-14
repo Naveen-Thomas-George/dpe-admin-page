@@ -14,7 +14,7 @@ const docClient = DynamoDBDocumentClient.from(client);
 const SCHOOL_TABLE = "School-table";
 const SCORE_TABLE = "Score-table";
 
-export async function POST(request: Request) {
+export async function POST(request: Request) {``
   try {
     const body = await request.json();
     const { schoolName } = body;

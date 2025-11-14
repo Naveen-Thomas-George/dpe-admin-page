@@ -88,7 +88,7 @@ export async function POST(request: Request) {
                         ChestNo: winner.chestNo.trim(),
                         StudentName: winner.name.trim(),
                         SchoolName: winner.school.trim(),
-                        Points: winner.points || null, // Manual points if provided
+                        Points: winner.points !== undefined ? winner.points : (winner.position === 1 ? 5 : winner.position === 2 ? 3 : winner.position === 3 ? 1 : 0), // Auto points for positions 1-3, manual if provided
                         RecordedAt: timestamp,
                     }
                 }

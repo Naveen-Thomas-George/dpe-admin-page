@@ -343,54 +343,54 @@ export function ScanTool() {
 
   const UserDetailsCard = () => (
     <Card className="shadow-lg border-2">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>User Details</CardTitle>
+      <CardHeader className="pb-3 sm:pb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+          <CardTitle className="text-lg sm:text-xl">User Details</CardTitle>
           <div className="flex gap-2">
             {(scannedData || userData) && (
               <>
-                <Button onClick={copyToClipboard} variant="outline" size="sm" className="bg-transparent text-xs h-8">
+                <Button onClick={copyToClipboard} variant="outline" size="sm" className="bg-transparent text-xs h-8 px-2 sm:px-3">
                   {copied ? (
-                    <><Check className="w-4 h-4 mr-1 text-green-500" /> Copied!</>
+                    <><Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-green-500" /> Copied!</>
                   ) : (
-                    <><Copy className="w-4 h-4 mr-1" /> Copy ID</>
+                    <><Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Copy ID</>
                   )}
                 </Button>
-                <Button onClick={resetScan} variant="outline" size="sm" className="bg-transparent hover:bg-red-50 text-xs h-8">
+                <Button onClick={resetScan} variant="outline" size="sm" className="bg-transparent hover:bg-red-50 text-xs h-8 px-2 sm:px-3">
                   Clear Scan
                 </Button>
               </>
             )}
           </div>
         </div>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
             {scannedData ? `Last Lookup: ${scannedData}` : "Awaiting scan or manual input."}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {isFetchingUser && (
-          <div className="flex items-center justify-center p-6 bg-blue-50/50 rounded-lg text-blue-600 border border-blue-200">
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            <span className="text-base font-medium">Fetching user data...</span>
+          <div className="flex items-center justify-center p-4 sm:p-6 bg-blue-50/50 rounded-lg text-blue-600 border border-blue-200">
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+            <span className="text-sm sm:text-base font-medium">Fetching user data...</span>
           </div>
         )}
 
         {userFetchError && (
-          <div className="p-4 bg-red-100 border border-red-400 text-red-800 rounded-lg flex gap-2 items-start">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <p className="text-sm font-semibold">Error: <span className="font-normal">{userFetchError}</span></p>
+          <div className="p-3 sm:p-4 bg-red-100 border border-red-400 text-red-800 rounded-lg flex gap-2 items-start">
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm font-semibold">Error: <span className="font-normal">{userFetchError}</span></p>
           </div>
         )}
 
         {userData ? (
           <>
-            <div className="p-5 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg space-y-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-xl font-extrabold text-green-800">
+            <div className="p-3 sm:p-5 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg space-y-2 sm:space-y-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p className="text-lg sm:text-xl font-extrabold text-green-800">
                   {userData.user.fullName || 'N/A'}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   {userData.user.duplicateWarning && (
                     <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-300 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
@@ -403,17 +403,17 @@ export function ScanTool() {
                 </div>
               </div>
               {userData.user.duplicateWarning && (
-                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <p className="text-sm text-orange-800 font-medium flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
+                <div className="p-2 sm:p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-xs sm:text-sm text-orange-800 font-medium flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                     {userData.user.duplicateWarning}
                   </p>
                 </div>
               )}
-              <p className="text-sm text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">
+              <p className="text-xs sm:text-sm text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">
                 CLEAR ID: <span className="font-bold">{userData.user.clearId}</span>
               </p>
-              <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-700 mt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 sm:gap-y-2 text-xs sm:text-sm text-gray-700 mt-2 sm:mt-3">
                 <div className="flex items-center">
                   <span className="font-semibold mr-2">School:</span>
                   <span>{userData.user.schoolShort || 'N/A'}</span>
@@ -434,42 +434,42 @@ export function ScanTool() {
                   <span className="font-semibold mr-2">Chest No:</span>
                   <span>{userData.user.chestNo || 'N/A'}</span>
                 </div>
-                <div className="col-span-2 flex items-center mt-2">
+                <div className="col-span-1 sm:col-span-2 flex items-center mt-1 sm:mt-2">
                   <span className="font-semibold mr-2">Gmail:</span>
-                  <span className="font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">{userData.user.christGmail || 'N/A'}</span>
+                  <span className="font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs sm:text-sm break-all">{userData.user.christGmail || 'N/A'}</span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <h5 className="text-lg font-semibold text-gray-800">Registered Events</h5>
-                <Badge variant="secondary" className="text-xs">
+            <div className="pt-3 sm:pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 gap-2">
+                <h5 className="text-base sm:text-lg font-semibold text-gray-800">Registered Events</h5>
+                <Badge variant="secondary" className="text-xs w-fit">
                   {userData.registeredEvents.length} Event{userData.registeredEvents.length !== 1 ? 's' : ''}
                 </Badge>
               </div>
-              <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
+              <ul className="space-y-1 sm:space-y-2 max-h-32 sm:max-h-48 overflow-y-auto pr-1 sm:pr-2">
                 {userData.registeredEvents.map((event, index) => (
-                  <li key={index} className="flex justify-between items-center text-sm p-3 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 rounded-lg shadow-sm transition-all duration-200 border border-gray-200">
-                    <span className="font-semibold text-gray-800 flex-1">{event.name}</span>
-                    <Badge variant="outline" className="text-xs bg-white text-blue-600 border-blue-300 ml-2">
+                  <li key={index} className="flex justify-between items-center text-xs sm:text-sm p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 rounded-lg shadow-sm transition-all duration-200 border border-gray-200">
+                    <span className="font-semibold text-gray-800 flex-1 truncate mr-2">{event.name}</span>
+                    <Badge variant="outline" className="text-xs bg-white text-blue-600 border-blue-300 ml-1 sm:ml-2 shrink-0">
                       {event.category.toUpperCase()}
                     </Badge>
                   </li>
                 ))}
               </ul>
               {userData.registeredEvents.length === 0 && (
-                <div className="text-center py-6">
-                  <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500 italic">No events found for this user.</p>
+                <div className="text-center py-4 sm:py-6">
+                  <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs sm:text-sm text-gray-500 italic">No events found for this user.</p>
                 </div>
               )}
             </div>
 
             {/* Chest Number Update Section */}
-            <div className="pt-4 border-t border-gray-200">
-              <h5 className="text-lg font-semibold text-gray-800 mb-3">Update Chest Number</h5>
-              <div className="flex gap-2">
+            <div className="pt-3 sm:pt-4 border-t border-gray-200">
+              <h5 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Update Chest Number</h5>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   type="text"
                   placeholder="Enter chest number (3-4 digits)"
@@ -495,26 +495,26 @@ export function ScanTool() {
                 <Button
                   onClick={handleUpdateChestNumber}
                   disabled={isUpdatingChest || !chestNumber.trim()}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                 >
                   {isUpdatingChest ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
                 </Button>
               </div>
               {chestUpdateMessage.text && (
-                <div className={`mt-2 p-2 rounded text-sm ${chestUpdateMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <div className={`mt-2 p-2 rounded text-xs sm:text-sm ${chestUpdateMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                   {chestUpdateMessage.text}
                 </div>
               )}
             </div>
 
             {/* Mark Attendance Section */}
-            <div className="pt-4 border-t border-gray-200">
-              <h5 className="text-lg font-semibold text-gray-800 mb-3">Mark Attendance</h5>
-              <div className="space-y-3">
+            <div className="pt-3 sm:pt-4 border-t border-gray-200">
+              <h5 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Mark Attendance</h5>
+              <div className="space-y-2 sm:space-y-3">
                 <select
                   value={selectedEvent}
                   onChange={(e) => setSelectedEvent(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                 >
                   <option value="">Select Event</option>
                   {userData.registeredEvents.map((event) => (
@@ -528,30 +528,30 @@ export function ScanTool() {
                   disabled={isMarkingAttendance || !selectedEvent}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  {isMarkingAttendance ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  {isMarkingAttendance ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : null}
                   Mark Present
                 </Button>
               </div>
               {attendanceMessage.text && (
-                <div className={`mt-2 p-2 rounded text-sm ${attendanceMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <div className={`mt-2 p-2 rounded text-xs sm:text-sm ${attendanceMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                   {attendanceMessage.text}
                 </div>
               )}
             </div>
           </>
         ) : (
-          <div className="text-gray-400 text-sm text-center py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="text-gray-400 text-xs sm:text-sm text-center py-8 sm:py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100">
             <div className="flex flex-col items-center">
               {isScanning ? (
                 <>
-                  <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-3" />
-                  <p className="font-semibold text-gray-600">Scanning for QR codes...</p>
+                  <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-blue-500 mb-3" />
+                  <p className="font-semibold text-gray-600 text-sm sm:text-base">Scanning for QR codes...</p>
                   <p className="text-xs text-gray-500 mt-1">Position QR code within the camera view</p>
                 </>
               ) : (
                 <>
-                  <Camera className="w-10 h-10 mb-3 text-gray-400" />
-                  <p className="font-semibold text-gray-600 mb-1">Ready to Scan</p>
+                  <Camera className="w-8 h-8 sm:w-10 sm:h-10 mb-3 text-gray-400" />
+                  <p className="font-semibold text-gray-600 mb-1 text-sm sm:text-base">Ready to Scan</p>
                   <p className="text-xs text-gray-500">Scan QR code, enter CLEAR ID, or use Gmail lookup</p>
                 </>
               )}
@@ -563,18 +563,18 @@ export function ScanTool() {
   )
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100 font-sans">
-      <div className="w-full max-w-6xl space-y-8 bg-white rounded-xl shadow-2xl p-6 lg:p-10">
-        <h1 className="text-4xl font-extrabold text-center text-gray-900 mb-2">Event Check-In System</h1>
-        <p className="text-center text-gray-500 mb-4">Quickly verify registrations using QR/ID or student email.</p>
-        <div className="flex justify-center mb-6">
-          <Badge variant="secondary" className="text-sm px-3 py-1">
-            <Camera className="w-4 h-4 mr-2" />
+    <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 bg-gray-100 font-sans">
+      <div className="w-full max-w-6xl space-y-4 sm:space-y-8 bg-white rounded-xl shadow-2xl p-3 sm:p-6 lg:p-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-center text-gray-900 mb-2">Event Check-In System</h1>
+        <p className="text-center text-gray-500 mb-2 sm:mb-4 text-sm sm:text-base">Quickly verify registrations using QR/ID or student email.</p>
+        <div className="flex justify-center mb-4 sm:mb-6">
+          <Badge variant="secondary" className="text-xs sm:text-sm px-2 sm:px-3 py-1">
+            <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Scan & Verify
           </Badge>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
 
           {/* 1. User Details / Results Panel (Left Column) */}
           <div className="lg:col-span-1 order-2 lg:order-1">
@@ -584,8 +584,8 @@ export function ScanTool() {
           {/* 2. Scanner and Manual Input Panel (Right Column) */}
           <Card className="lg:col-span-1 order-1 lg:order-2">
             <CardHeader>
-              <CardTitle>Scanner & Lookup</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Scanner & Lookup</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 {detectionStatus === "scanning" && "Scanning for QR codes... Point camera at QR code to detect."}
                 {detectionStatus === "detected" && `Identifier used: ${scannedData}. Data lookup complete.`}
                 {detectionStatus === "idle" && "Use the camera or manual fallbacks below."}
@@ -594,7 +594,7 @@ export function ScanTool() {
 
             <CardContent className="space-y-6">
               {/* Camera View / Placeholder */}
-              <div className="relative bg-black rounded-xl overflow-hidden aspect-video border-4 border-gray-200 shadow-inner">
+              <div className="relative bg-black rounded-xl overflow-hidden aspect-video border-2 sm:border-4 border-gray-200 shadow-inner">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -603,86 +603,86 @@ export function ScanTool() {
                   className={`w-full h-full object-cover transition-opacity duration-300 ${isScanning ? 'opacity-100' : 'opacity-0'}`}
                 />
                 {(isScanning) && (
-                  <div className="absolute inset-0 border-8 border-yellow-400 rounded-xl pointer-events-none opacity-80 animate-pulse">
-                    <div className="absolute inset-0 flex items-center justify-center text-white text-xl font-bold bg-black/50">
+                  <div className="absolute inset-0 border-4 sm:border-8 border-yellow-400 rounded-xl pointer-events-none opacity-80 animate-pulse">
+                    <div className="absolute inset-0 flex items-center justify-center text-white text-lg sm:text-xl font-bold bg-black/50">
                       SCANNING...
                     </div>
                   </div>
                 )}
                 {(!isScanning && !scannedData) && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90">
-                    <Camera className="w-16 h-16 text-gray-500 mb-2" />
-                    <p className="text-gray-400">Camera Standby</p>
+                    <Camera className="w-12 h-12 sm:w-16 sm:h-16 text-gray-500 mb-2" />
+                    <p className="text-gray-400 text-sm sm:text-base">Camera Standby</p>
                   </div>
                 )}
               </div>
               
               {/* Scanning Controls */}
               {error && (
-                <div className="p-3 bg-red-100 border border-red-400 text-red-800 rounded-lg flex gap-2 items-start">
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <p className="text-sm">{error}</p>
+                <div className="p-2 sm:p-3 bg-red-100 border border-red-400 text-red-800 rounded-lg flex gap-2 items-start">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
+                  <p className="text-xs sm:text-sm">{error}</p>
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 {!isScanning ? (
-                  <Button 
-                    onClick={startScanning} 
-                    className="flex-1 bg-green-600 hover:bg-green-700 shadow-md" 
+                  <Button
+                    onClick={startScanning}
+                    className="flex-1 bg-green-600 hover:bg-green-700 shadow-md"
                     disabled={!isBrowserReady || isFetchingUser}
                   >
-                    <Camera className="w-5 h-5 mr-2" />
+                    <Camera className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     Start Scanning
                   </Button>
                 ) : (
                   <Button onClick={stopScanning} variant="destructive" className="flex-1 shadow-md">
-                    <X className="w-5 h-5 mr-2" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     Stop Camera
                   </Button>
                 )}
               </div>
 
               {/* Manual Input Section - CLEAR ID */}
-              <div className="pt-6 border-t border-gray-200 space-y-3">
-                  <h4 className="text-lg font-bold text-gray-700">1. Lookup by Clear ID</h4>
-                  <div className="flex gap-2">
+              <div className="pt-4 sm:pt-6 border-t border-gray-200 space-y-2 sm:space-y-3">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-700">1. Lookup by Clear ID</h4>
+                  <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                           type="text"
                           placeholder="e.g., GE-SOS-UG-14669"
                           value={manualClearId}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setManualClearId(e.target.value.toUpperCase())}
-                          className="flex-1 p-3 border-gray-300"
+                          className="flex-1 p-2 sm:p-3 border-gray-300 text-sm sm:text-base"
                           disabled={isScanning || isFetchingUser}
                       />
-                      <Button 
-                          onClick={handleManualClearIdFetch} 
-                          disabled={!manualClearId.trim() || isScanning || isFetchingUser} 
-                          className="shrink-0 bg-blue-600 hover:bg-blue-700"
+                      <Button
+                          onClick={handleManualClearIdFetch}
+                          disabled={!manualClearId.trim() || isScanning || isFetchingUser}
+                          className="shrink-0 bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
                       >
-                          <Check className="w-4 h-4 mr-1" /> ID Fetch
+                          <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> ID Fetch
                       </Button>
                   </div>
               </div>
 
               {/* Manual Input Section - GMAIL FALLBACK */}
-              <div className="pt-6 border-t border-gray-200 space-y-3">
-                  <h4 className="text-lg font-bold text-gray-700">2. Fallback: Search by Christ Gmail</h4>
-                  <div className="flex gap-2">
+              <div className="pt-4 sm:pt-6 border-t border-gray-200 space-y-2 sm:space-y-3">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-700">2. Fallback: Search by Christ Gmail</h4>
+                  <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                           type="email"
                           placeholder="e.g., priya.sharma@christuniversity.in"
                           value={manualGmail}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setManualGmail(e.target.value)}
-                          className="flex-1 p-3 border-gray-300"
+                          className="flex-1 p-2 sm:p-3 border-gray-300 text-sm sm:text-base"
                           disabled={isScanning || isFetchingUser}
                       />
                       <Button
                           onClick={handleManualGmailFetch}
                           disabled={!manualGmail.trim() || isScanning || isFetchingUser || !manualGmail.includes('@')}
-                          className="shrink-0 bg-purple-600 hover:bg-purple-700"
+                          className="shrink-0 bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
                       >
-                          <Mail className="w-4 h-4 mr-1" /> Gmail Fetch
+                          <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Gmail Fetch
                       </Button>
                   </div>
                   <p className="text-xs text-gray-500 italic">
@@ -691,23 +691,23 @@ export function ScanTool() {
               </div>
 
               {/* Manual Input Section - REGISTRATION NUMBER FALLBACK */}
-              <div className="pt-6 border-t border-gray-200 space-y-3">
-                  <h4 className="text-lg font-bold text-gray-700">3. Fallback: Search by Registration Number</h4>
-                  <div className="flex gap-2">
+              <div className="pt-4 sm:pt-6 border-t border-gray-200 space-y-2 sm:space-y-3">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-700">3. Fallback: Search by Registration Number</h4>
+                  <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                           type="text"
                           placeholder="e.g., 22123456 (7-9 digits)"
                           value={manualRegNumber}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setManualRegNumber(e.target.value)}
-                          className="flex-1 p-3 border-gray-300"
+                          className="flex-1 p-2 sm:p-3 border-gray-300 text-sm sm:text-base"
                           disabled={isScanning || isFetchingUser}
                       />
                       <Button
                           onClick={handleManualRegNumberFetch}
                           disabled={!manualRegNumber.trim() || isScanning || isFetchingUser}
-                          className="shrink-0 bg-green-600 hover:bg-green-700"
+                          className="shrink-0 bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                       >
-                          <Check className="w-4 h-4 mr-1" /> Reg No Fetch
+                          <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Reg No Fetch
                       </Button>
                   </div>
                   <p className="text-xs text-gray-500 italic">
@@ -716,9 +716,9 @@ export function ScanTool() {
               </div>
 
               {/* Additional Fallbacks Section - For future expansion */}
-              <div className="pt-6 border-t border-gray-200 space-y-3">
-                  <h4 className="text-lg font-bold text-gray-700">4. Additional Fallbacks (Coming Soon)</h4>
-                  <div className="text-sm text-gray-600 space-y-2">
+              <div className="pt-4 sm:pt-6 border-t border-gray-200 space-y-2 sm:space-y-3">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-700">4. Additional Fallbacks (Coming Soon)</h4>
+                  <div className="text-xs sm:text-sm text-gray-600 space-y-1 sm:space-y-2">
                       <p>• <strong>Full Name:</strong> Fuzzy search by student name</p>
                       <p>• <strong>Phone Number:</strong> Search by contact number</p>
                   </div>
