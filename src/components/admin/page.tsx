@@ -357,14 +357,11 @@ export default function VerificationPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Reg Number</TableHead>
-                      <TableHead>School</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead>Gender</TableHead>
+                      <TableHead>Full Name</TableHead>
+                      <TableHead>Registration Number</TableHead>
+                      <TableHead>Christ Gmail</TableHead>
                       <TableHead>Attendance</TableHead>
                       <TableHead>Chest Number</TableHead>
-                      <TableHead>Duplicates</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -372,9 +369,7 @@ export default function VerificationPage() {
                       <TableRow key={user.clearId}>
                         <TableCell className="font-medium">{user.fullName}</TableCell>
                         <TableCell>{user.regNumber}</TableCell>
-                        <TableCell>{user.schoolShort}</TableCell>
-                        <TableCell>{user.classSection}</TableCell>
-                        <TableCell>{user.gender}</TableCell>
+                        <TableCell>{user.christGmail}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Checkbox
@@ -404,9 +399,6 @@ export default function VerificationPage() {
                             className="w-20"
                             maxLength={4}
                           />
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{user.duplicates}</Badge>
                         </TableCell>
                       </TableRow>
                     ))}
