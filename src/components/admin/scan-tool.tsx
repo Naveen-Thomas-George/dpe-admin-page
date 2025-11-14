@@ -466,78 +466,7 @@ export function ScanTool() {
               )}
             </div>
 
-            {/* Chest Number Update Section */}
-            <div className="pt-3 sm:pt-4 border-t border-gray-200">
-              <h5 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Update Chest Number</h5>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  type="text"
-                  placeholder="Enter chest number (3-4 digits)"
-                  value={chestNumber}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const input = e.target.value;
-                    // Only allow digits, max 4 characters
-                    const digitsOnly = input.replace(/\D/g, '').slice(0, 4);
-                    setChestNumber(digitsOnly);
-                  }}
-                  onFocus={(e) => e.target.select()} // Select all text when focused
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && chestNumber.trim()) {
-                      handleUpdateChestNumber();
-                    }
-                  }}
-                  className="flex-1"
-                  maxLength={4}
-                  autoComplete="off"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                />
-                <Button
-                  onClick={handleUpdateChestNumber}
-                  disabled={isUpdatingChest || !chestNumber.trim()}
-                  className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                >
-                  {isUpdatingChest ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
-                </Button>
-              </div>
-              {chestUpdateMessage.text && (
-                <div className={`mt-2 p-2 rounded text-xs sm:text-sm ${chestUpdateMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {chestUpdateMessage.text}
-                </div>
-              )}
-            </div>
 
-            {/* Mark Attendance Section */}
-            <div className="pt-3 sm:pt-4 border-t border-gray-200">
-              <h5 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Mark Attendance</h5>
-              <div className="space-y-2 sm:space-y-3">
-                <select
-                  value={selectedEvent}
-                  onChange={(e) => setSelectedEvent(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 text-sm sm:text-base"
-                >
-                  <option value="">Select Event</option>
-                  {userData.registeredEvents.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.name} ({event.category})
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  onClick={handleMarkAttendance}
-                  disabled={isMarkingAttendance || !selectedEvent}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {isMarkingAttendance ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" /> : null}
-                  Mark Present
-                </Button>
-              </div>
-              {attendanceMessage.text && (
-                <div className={`mt-2 p-2 rounded text-xs sm:text-sm ${attendanceMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {attendanceMessage.text}
-                </div>
-              )}
-            </div>
           </>
         ) : (
           <div className="text-gray-400 text-xs sm:text-sm text-center py-8 sm:py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100">
