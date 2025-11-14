@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, BatchWriteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, BatchWriteCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
 
 // --- DynamoDB Client Initialization ---
@@ -69,6 +69,19 @@ export async function POST(request: Request) {
         const eventId = createEventID(eventName);
         const timestamp = new Date().toISOString();
 
+        // Check if event already exists
+        const queryCommand = new QueryCommand({
+            TableName: TABLE_NAME,
+            KeyConditionExpression: 'EventID = :eventId',
+            ExpressionAttributeValues: {
+                ':eventId': eventId,
+            },
+            ProjectionExpression: 'PositionID',
+        });
+
+        const existingEvent = await docClient.send(queryCommand);
+        const existingPositions = existingEvent.Items?.map(item => item.PositionID) || [];
+
         let allPutRequests: any[] = [];
 
         if (eventType === 'individual') {
@@ -83,15 +96,35 @@ export async function POST(request: Request) {
                 return acc;
             }, {} as Record<number, WinnerEntry[]>);
 
-            // 1. Create PutRequest for each winner, adding suffix for multiples
-            const winnerPutRequests = Object.entries(groupedWinners).flatMap(([posStr, wins]) =>
-                wins.map((winner, index) => {
-                    const suffix = wins.length > 1 ? `_${index + 1}` : '';
+            // 1. Create PutRequest for each winner, adding suffix for multiples and checking existing positions
+            const winnerPutRequests = Object.entries(groupedWinners).flatMap(([posStr, wins]) => {
+                const position = parseInt(posStr);
+                const basePositionId = `POS#${String(position).padStart(2, '0')}`;
+
+                // Find existing suffixes for this position
+                const existingSuffixes = existingPositions
+                    .filter(pid => pid.startsWith(basePositionId))
+                    .map(pid => pid === basePositionId ? 0 : parseInt(pid.split('_')[1] || '0'))
+                    .sort((a, b) => a - b);
+
+                let nextSuffix = 0;
+                if (existingSuffixes.length > 0) {
+                    // Find the next available suffix
+                    for (let i = 0; i <= existingSuffixes.length; i++) {
+                        if (!existingSuffixes.includes(i)) {
+                            nextSuffix = i;
+                            break;
+                        }
+                    }
+                }
+
+                return wins.map((winner, index) => {
+                    const suffix = nextSuffix + index > 0 ? `_${nextSuffix + index}` : '';
                     return {
                         PutRequest: {
                             Item: {
                                 EventID: eventId,                             // PK: Partition Key
-                                PositionID: `POS#${String(winner.position).padStart(2, '0')}${suffix}`, // SK: Sort Key (e.g., POS#01, POS#01_1, POS#01_2)
+                                PositionID: `${basePositionId}${suffix}`, // SK: Sort Key (e.g., POS#01, POS#01_1, POS#01_2)
                                 EventName: eventName.trim(),                  // Raw event name for display
                                 EventType: 'individual',
                                 Position: winner.position,
@@ -103,27 +136,37 @@ export async function POST(request: Request) {
                             }
                         }
                     };
-                })
-            );
+                });
+            });
 
-            // 2. Create PutRequest for the event metadata
-            const metadataPutRequest = {
-                 PutRequest: {
-                     Item: {
-                         EventID: eventId,        // PK
-                         PositionID: "METADATA",  // SK
-                         EventName: eventName.trim(),
-                         EventType: 'individual',
-                         RecordedAt: timestamp,
-                         TotalWinnersRecorded: winners.length,
+            // 2. Create PutRequest for the event metadata (only if event doesn't exist)
+            if (existingPositions.length === 0) {
+                const metadataPutRequest = {
+                     PutRequest: {
+                         Item: {
+                             EventID: eventId,        // PK
+                             PositionID: "METADATA",  // SK
+                             EventName: eventName.trim(),
+                             EventType: 'individual',
+                             RecordedAt: timestamp,
+                             TotalWinnersRecorded: winners.length,
+                         }
                      }
-                 }
-            };
+                };
+                allPutRequests.push(metadataPutRequest);
+            }
 
-            allPutRequests = [metadataPutRequest, ...winnerPutRequests];
+            allPutRequests = [...allPutRequests, ...winnerPutRequests];
         } else if (eventType === 'team') {
             if (!teamEntry) {
                 return NextResponse.json({ error: "Invalid data: Team entry is required for team events." }, { status: 400 });
+            }
+
+            // Check if team entry already exists for this event
+            const teamExists = existingPositions.includes("TEAM#01");
+
+            if (teamExists) {
+                return NextResponse.json({ error: "Team entry already exists for this event." }, { status: 400 });
             }
 
             // Create PutRequest for team entry
@@ -142,21 +185,24 @@ export async function POST(request: Request) {
                 }
             };
 
-            // Metadata for team event
-            const metadataPutRequest = {
-                 PutRequest: {
-                     Item: {
-                         EventID: eventId,        // PK
-                         PositionID: "METADATA",  // SK
-                         EventName: eventName.trim(),
-                         EventType: 'team',
-                         RecordedAt: timestamp,
-                         TotalTeamsRecorded: 1,
+            // Metadata for team event (only if event doesn't exist)
+            if (existingPositions.length === 0) {
+                const metadataPutRequest = {
+                     PutRequest: {
+                         Item: {
+                             EventID: eventId,        // PK
+                             PositionID: "METADATA",  // SK
+                             EventName: eventName.trim(),
+                             EventType: 'team',
+                             RecordedAt: timestamp,
+                             TotalTeamsRecorded: 1,
+                         }
                      }
-                 }
-            };
+                };
+                allPutRequests.push(metadataPutRequest);
+            }
 
-            allPutRequests = [metadataPutRequest, teamPutRequest];
+            allPutRequests = [...allPutRequests, teamPutRequest];
         } else {
             return NextResponse.json({ error: "Invalid event type." }, { status: 400 });
         }
