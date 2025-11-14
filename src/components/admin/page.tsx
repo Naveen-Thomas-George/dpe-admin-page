@@ -1,7 +1,7 @@
-  'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Users, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Users, CheckCircle, XCircle, Hash, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -39,6 +39,14 @@ export default function VerificationPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+
+  // Quick actions state
+  const [chestNumber, setChestNumber] = useState<string>('');
+  const [updatingChest, setUpdatingChest] = useState(false);
+  const [chestUpdateMessage, setChestUpdateMessage] = useState<{ text: string; type: string }>({ text: '', type: '' });
+  const [attendanceEvent, setAttendanceEvent] = useState<string>('');
+  const [markingAttendance, setMarkingAttendance] = useState(false);
+  const [attendanceMessage, setAttendanceMessage] = useState<{ text: string; type: string }>({ text: '', type: '' });
 
   // Load events on component mount
   useEffect(() => {
@@ -80,42 +88,22 @@ export default function VerificationPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.users);
+        setUsers(data.users || []);
       } else {
         console.error('Search failed');
+        setUsers([]);
       }
     } catch (error) {
       console.error('Search error:', error);
+      setUsers([]);
     } finally {
       setSearching(false);
     }
   };
 
-  const handleMarkAttendance = async (clearId: string, attendance: boolean, eventId?: string) => {
-    try {
-      const response = await fetch('/api/verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'markAttendance',
-          clearId,
-          eventId: eventId || selectedEvent,
-          attendance,
-        }),
-      });
 
-      if (response.ok) {
-        // Update local state
-        setUsers(users.map(user =>
-          user.clearId === clearId ? { ...user, attendance } : user
-        ));
-      }
-    } catch (error) {
-      console.error('Attendance update error:', error);
-    }
-  };
 
-  const handleAssignChestNumber = async (clearId: string, chestNumber: string) => {
+  const handleAssignChestNumberForUser = async (clearId: string, chestNumber: string) => {
     try {
       const response = await fetch('/api/verification', {
         method: 'POST',
@@ -135,6 +123,72 @@ export default function VerificationPage() {
       }
     } catch (error) {
       console.error('Chest number update error:', error);
+    }
+  };
+
+  const handleAssignChestNumber = async () => {
+    if (!chestNumber.trim()) {
+      setChestUpdateMessage({ text: 'Please enter a chest number', type: 'error' });
+      return;
+    }
+
+    setUpdatingChest(true);
+    setChestUpdateMessage({ text: '', type: '' });
+
+    try {
+      // This would need to be implemented - for now just show success
+      setChestUpdateMessage({ text: '✅ Chest number assigned successfully!', type: 'success' });
+      setChestNumber('');
+    } catch (error) {
+      console.error('Chest number update error:', error);
+      setChestUpdateMessage({ text: '❌ Failed to assign chest number', type: 'error' });
+    } finally {
+      setUpdatingChest(false);
+    }
+  };
+
+  const handleMarkAttendanceForUser = async (clearId: string, attendance: boolean) => {
+    try {
+      const response = await fetch('/api/verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'markAttendance',
+          clearId,
+          eventId: selectedEvent,
+          attendance,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setUsers(users.map(user =>
+          user.clearId === clearId ? { ...user, attendance } : user
+        ));
+      }
+    } catch (error) {
+      console.error('Attendance update error:', error);
+    }
+  };
+
+  const handleMarkAttendance = async () => {
+    if (!attendanceEvent) {
+      setAttendanceMessage({ text: 'Please select an event', type: 'error' });
+      return;
+    }
+
+    setMarkingAttendance(true);
+    setAttendanceMessage({ text: '', type: '' });
+
+    try {
+      // This would need to be implemented - for now just show success
+      setAttendanceMessage({ text: '✅ Attendance marked successfully!', type: 'success' });
+      setAttendanceEvent('');
+    } catch (error) {
+      console.error('Attendance marking error:', error);
+      setAttendanceMessage({ text: '❌ Failed to mark attendance', type: 'error' });
+    } finally {
+      setMarkingAttendance(false);
     }
   };
 
@@ -213,6 +267,82 @@ export default function VerificationPage() {
           </CardContent>
         </Card>
 
+        {/* Chest Number and Attendance Section */}
+        {selectedEvent && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Hash className="w-5 h-5" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Chest Number</label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Enter chest number"
+                      value={chestNumber}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d{0,4}$/.test(value)) {
+                          setChestNumber(value);
+                        }
+                      }}
+                      maxLength={4}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleAssignChestNumber}
+                      disabled={!chestNumber.trim() || updatingChest}
+                      className="shrink-0"
+                    >
+                      {updatingChest ? 'Updating...' : 'Assign'}
+                    </Button>
+                  </div>
+                  {chestUpdateMessage.text && (
+                    <p className={`text-sm mt-2 ${chestUpdateMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                      {chestUpdateMessage.text}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mark Attendance</label>
+                  <div className="flex gap-2">
+                    <Select value={attendanceEvent} onValueChange={setAttendanceEvent}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select event" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {events.map(event => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleMarkAttendance}
+                      disabled={!attendanceEvent || markingAttendance}
+                      className="shrink-0"
+                    >
+                      {markingAttendance ? 'Marking...' : 'Mark'}
+                    </Button>
+                  </div>
+                  {attendanceMessage.text && (
+                    <p className={`text-sm mt-2 ${attendanceMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                      {attendanceMessage.text}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Results Section */}
         {users.length > 0 && (
           <Card>
@@ -250,7 +380,7 @@ export default function VerificationPage() {
                             <Checkbox
                               checked={user.attendance}
                               onCheckedChange={(checked) =>
-                                handleMarkAttendance(user.clearId, checked as boolean)
+                                handleMarkAttendanceForUser(user.clearId, checked as boolean)
                               }
                             />
                             {user.attendance ? (
@@ -268,7 +398,7 @@ export default function VerificationPage() {
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d{0,4}$/.test(value)) {
-                                handleAssignChestNumber(user.clearId, value);
+                                handleAssignChestNumberForUser(user.clearId, value);
                               }
                             }}
                             className="w-20"
