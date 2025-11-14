@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
 
 const client = new DynamoDBClient({
@@ -47,6 +47,32 @@ export async function POST(request: Request) {
 
     const newEventId = createEventID(newEventName);
     const newPositionId = `POS#${String(newPosition).padStart(2, '0')}`;
+
+    // Check if the new position is already taken by another winner in the same event
+    // For events with multiples (e.g., doubles), check all position variants
+    const possiblePositionIds = [
+      newPositionId,
+      `${newPositionId}_1`,
+      `${newPositionId}_2`,
+      `${newPositionId}_3`,
+      `${newPositionId}_4`
+    ];
+
+    for (const posId of possiblePositionIds) {
+      const getCommand = new GetCommand({
+        TableName: SCORE_TABLE,
+        Key: {
+          EventID: newEventId,
+          PositionID: posId,
+        },
+      });
+
+      const existingItem = await docClient.send(getCommand);
+
+      if (existingItem.Item && existingItem.Item.ChestNo !== newChestNo) {
+        return NextResponse.json({ error: `Position ${newPosition} is already taken by another participant in this event.` }, { status: 409 });
+      }
+    }
 
     // Update the item
     const updateCommand = new UpdateCommand({

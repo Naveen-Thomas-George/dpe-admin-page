@@ -76,23 +76,35 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "Invalid data: Winners array is required for individual events." }, { status: 400 });
             }
 
-            // 1. Create PutRequest for each winner
-            const winnerPutRequests = winners.map(winner => ({
-                PutRequest: {
-                    Item: {
-                        EventID: eventId,                             // PK: Partition Key
-                        PositionID: `POS#${String(winner.position).padStart(2, '0')}`, // SK: Sort Key (e.g., POS#01, POS#02)
-                        EventName: eventName.trim(),                  // Raw event name for display
-                        EventType: 'individual',
-                        Position: winner.position,
-                        ChestNo: winner.chestNo.trim(),
-                        StudentName: winner.name.trim(),
-                        SchoolName: winner.school.trim(),
-                        Points: winner.points !== undefined ? winner.points : (winner.position === 1 ? 5 : winner.position === 2 ? 3 : winner.position === 3 ? 1 : 0), // Auto points for positions 1-3, manual if provided
-                        RecordedAt: timestamp,
-                    }
-                }
-            }));
+            // Group winners by position to handle multiples (e.g., doubles)
+            const groupedWinners = winners.reduce((acc, winner) => {
+                if (!acc[winner.position]) acc[winner.position] = [];
+                acc[winner.position].push(winner);
+                return acc;
+            }, {} as Record<number, WinnerEntry[]>);
+
+            // 1. Create PutRequest for each winner, adding suffix for multiples
+            const winnerPutRequests = Object.entries(groupedWinners).flatMap(([posStr, wins]) =>
+                wins.map((winner, index) => {
+                    const suffix = wins.length > 1 ? `_${index + 1}` : '';
+                    return {
+                        PutRequest: {
+                            Item: {
+                                EventID: eventId,                             // PK: Partition Key
+                                PositionID: `POS#${String(winner.position).padStart(2, '0')}${suffix}`, // SK: Sort Key (e.g., POS#01, POS#01_1, POS#01_2)
+                                EventName: eventName.trim(),                  // Raw event name for display
+                                EventType: 'individual',
+                                Position: winner.position,
+                                ChestNo: winner.chestNo.trim(),
+                                StudentName: winner.name.trim(),
+                                SchoolName: winner.school.trim(),
+                                Points: winner.points !== undefined ? winner.points : (winner.position === 1 ? 5 : winner.position === 2 ? 3 : winner.position === 3 ? 1 : 0), // Auto points for positions 1-3, manual if provided
+                                RecordedAt: timestamp,
+                            }
+                        }
+                    };
+                })
+            );
 
             // 2. Create PutRequest for the event metadata
             const metadataPutRequest = {
