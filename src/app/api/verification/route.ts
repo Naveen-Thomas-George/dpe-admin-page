@@ -12,7 +12,7 @@ const client = new DynamoDBClient({
 
 const docClient = DynamoDBDocumentClient.from(client);
 const USER_TABLE = "User-3q2hnhg4gnhg7jhx7qgk4x4ge-NONE"; // User table
-const EVENT_TABLE = "Event-3q2hnhg4gnhg7jhx7qgk4x4ge-NONE"; // Event registration table
+const EVENT_TABLE = "IndividualRegistration-3q2hnhg4gnhg7jhx7qgk4x4ge-NONE"; // Event registration table
 
 export async function POST(request: Request) {
   try {
@@ -26,9 +26,9 @@ export async function POST(request: Request) {
         }
 
         // Query users registered for the event from EVENT_TABLE
-        const eventQuery = new QueryCommand({
+        const eventQuery = new ScanCommand({
           TableName: EVENT_TABLE,
-          KeyConditionExpression: 'EventID = :eventId',
+          FilterExpression: 'eventId = :eventId',
           ExpressionAttributeValues: {
             ':eventId': eventId,
           },
@@ -40,8 +40,8 @@ export async function POST(request: Request) {
         // Get unique registration numbers and emails to find users
         const uniqueIdentifiers = new Set();
         registrations.forEach(reg => {
-          if (reg.RegNumber) uniqueIdentifiers.add(`reg:${reg.RegNumber}`);
-          if (reg.ChristGmail) uniqueIdentifiers.add(`email:${reg.ChristGmail}`);
+          if (reg.regNumber) uniqueIdentifiers.add(`reg:${reg.regNumber}`);
+          if (reg.christGmail) uniqueIdentifiers.add(`email:${reg.christGmail}`);
         });
 
         // Get all users that match the identifiers
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
           if (type === 'reg') {
             queryCommand = new ScanCommand({
               TableName: USER_TABLE,
-              FilterExpression: 'RegNumber = :value',
+              FilterExpression: 'regNumber = :value',
               ExpressionAttributeValues: {
                 ':value': value,
               },
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
           } else {
             queryCommand = new ScanCommand({
               TableName: USER_TABLE,
-              FilterExpression: 'ChristGmail = :value',
+              FilterExpression: 'christGmail = :value',
               ExpressionAttributeValues: {
                 ':value': value,
               },
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
         // Remove duplicates based on ClearID
         const uniqueUsers = users.reduce((acc: any[], user: any) => {
-          if (!acc.find((u: any) => u.ClearID === user.ClearID)) {
+          if (!acc.find((u: any) => u.clearId === user.clearId)) {
             acc.push(user);
           }
           return acc;
@@ -85,18 +85,18 @@ export async function POST(request: Request) {
         const usersWithDetails = uniqueUsers.map((user: any) => {
           // Check if user is registered for this specific event
           const userRegistration = registrations.find((reg: any) =>
-            reg.ClearID === user.ClearID ||
-            (reg.RegNumber === user.RegNumber && reg.ChristGmail === user.ChristGmail)
+            reg.playerClearId === user.clearId ||
+            (reg.regNumber === user.regNumber && reg.christGmail === user.christGmail)
           );
 
           return {
-            clearId: user.ClearID,
-            fullName: user.FullName,
-            regNumber: user.RegNumber,
-            christGmail: user.ChristGmail,
-            attendance: userRegistration?.Attendance || false,
-            chestNo: userRegistration?.ChestNo || '',
-            duplicates: user.Duplicates || 0,
+            clearId: user.clearId,
+            fullName: user.fullName,
+            regNumber: user.regNumber,
+            christGmail: user.christGmail,
+            attendance: userRegistration?.attendance || false,
+            chestNo: userRegistration?.chestNo || '',
+            duplicates: user.duplicates || 0,
             isRegistered: !!userRegistration, // Only show if registered for this event
           };
         }).filter((user: any) => user.isRegistered); // Only return users registered for this event
@@ -113,10 +113,10 @@ export async function POST(request: Request) {
         const updateCommand = new UpdateCommand({
           TableName: EVENT_TABLE,
           Key: {
-            EventID: eventId,
-            ClearID: clearId,
+            eventId: eventId,
+            playerClearId: clearId,
           },
-          UpdateExpression: 'SET Attendance = :attendance, RecordedAt = :recordedAt',
+          UpdateExpression: 'SET attendance = :attendance, RecordedAt = :recordedAt',
           ExpressionAttributeValues: {
             ':attendance': attendance,
             ':recordedAt': new Date().toISOString(),
@@ -128,9 +128,9 @@ export async function POST(request: Request) {
 
         // Also update attendance for duplicates
         // Find all users with same reg number or email
-        const userQuery = new QueryCommand({
+        const userQuery = new ScanCommand({
           TableName: USER_TABLE,
-          KeyConditionExpression: 'ClearID = :clearId',
+          FilterExpression: 'clearId = :clearId',
           ExpressionAttributeValues: {
             ':clearId': clearId,
           },
@@ -143,25 +143,25 @@ export async function POST(request: Request) {
           // Find all registrations for this user across all events
           const allRegistrationsQuery = new ScanCommand({
             TableName: EVENT_TABLE,
-            FilterExpression: 'RegNumber = :regNumber OR ChristGmail = :email',
+            FilterExpression: 'regNumber = :regNumber OR christGmail = :email',
             ExpressionAttributeValues: {
-              ':regNumber': user.RegNumber,
-              ':email': user.ChristGmail,
+              ':regNumber': user.regNumber,
+              ':email': user.christGmail,
             },
           });
 
           const allRegistrations = await docClient.send(allRegistrationsQuery);
-          const duplicateRegistrations = allRegistrations.Items?.filter(reg => reg.ClearID !== clearId) || [];
+          const duplicateRegistrations = allRegistrations.Items?.filter(reg => reg.playerClearId !== clearId) || [];
 
           // Update attendance for all duplicates
           for (const reg of duplicateRegistrations) {
             const duplicateUpdateCommand = new UpdateCommand({
               TableName: EVENT_TABLE,
               Key: {
-                EventID: reg.EventID,
-                ClearID: reg.ClearID,
+                eventId: reg.eventId,
+                playerClearId: reg.playerClearId,
               },
-              UpdateExpression: 'SET Attendance = :attendance, RecordedAt = :recordedAt',
+              UpdateExpression: 'SET attendance = :attendance, RecordedAt = :recordedAt',
               ExpressionAttributeValues: {
                 ':attendance': attendance,
                 ':recordedAt': new Date().toISOString(),
@@ -184,9 +184,9 @@ export async function POST(request: Request) {
         let userQuery;
         if (clearId) {
           // If clearId provided, use it directly
-          userQuery = new QueryCommand({
+          userQuery = new ScanCommand({
             TableName: USER_TABLE,
-            KeyConditionExpression: 'ClearID = :clearId',
+            FilterExpression: 'clearId = :clearId',
             ExpressionAttributeValues: {
               ':clearId': clearId,
             },
@@ -205,10 +205,10 @@ export async function POST(request: Request) {
         // Update chest number for all registrations of this user (by reg number or email)
         const allRegistrationsQuery = new ScanCommand({
           TableName: EVENT_TABLE,
-          FilterExpression: 'RegNumber = :regNumber OR ChristGmail = :email',
+          FilterExpression: 'regNumber = :regNumber OR christGmail = :email',
           ExpressionAttributeValues: {
-            ':regNumber': user.RegNumber,
-            ':email': user.ChristGmail,
+            ':regNumber': user.regNumber,
+            ':email': user.christGmail,
           },
         });
 
@@ -220,10 +220,10 @@ export async function POST(request: Request) {
           const updateCommand = new UpdateCommand({
             TableName: EVENT_TABLE,
             Key: {
-              EventID: reg.EventID,
-              ClearID: reg.ClearID,
+              eventId: reg.eventId,
+              playerClearId: reg.playerClearId,
             },
-            UpdateExpression: 'SET ChestNo = :chestNo, RecordedAt = :recordedAt',
+            UpdateExpression: 'SET chestNo = :chestNo, RecordedAt = :recordedAt',
             ExpressionAttributeValues: {
               ':chestNo': chestNumber,
               ':recordedAt': new Date().toISOString(),
