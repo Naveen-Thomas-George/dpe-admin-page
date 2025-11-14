@@ -1,4 +1,4 @@
-'use client';
+  'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Search, Users, CheckCircle, XCircle } from 'lucide-react';
@@ -91,7 +91,7 @@ export default function VerificationPage() {
     }
   };
 
-  const handleMarkAttendance = async (clearId: string, attendance: boolean) => {
+  const handleMarkAttendance = async (clearId: string, attendance: boolean, eventId?: string) => {
     try {
       const response = await fetch('/api/verification', {
         method: 'POST',
@@ -99,7 +99,7 @@ export default function VerificationPage() {
         body: JSON.stringify({
           action: 'markAttendance',
           clearId,
-          eventId: selectedEvent,
+          eventId: eventId || selectedEvent,
           attendance,
         }),
       });
