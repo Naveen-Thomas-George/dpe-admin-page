@@ -24,17 +24,16 @@ export async function POST(request: Request) {
       const { type, value } = searchCriteria;
 
       // First get all registrations for the event
-      const registrationQuery = new QueryCommand({
+      const registrationScan = new ScanCommand({
         TableName: REGISTRATION_TABLE,
-        IndexName: 'EventID-index', // Assuming GSI exists
-        KeyConditionExpression: 'EventID = :eventId',
+        FilterExpression: 'EventID = :eventId',
         ExpressionAttributeValues: {
           ':eventId': eventId,
         },
       });
 
-      const registrations = await docClient.send(registrationQuery);
-      const clearIds = registrations.Items?.map(item => item.ClearID) || [];
+      const registrations = await docClient.send(registrationScan);
+      const clearIds = registrations.Items?.map(item => item.PlayerClearID) || [];
 
       if (clearIds.length === 0) {
         return NextResponse.json({ users: [] });
@@ -42,14 +41,14 @@ export async function POST(request: Request) {
 
       // Get user details for these clearIds
       const userPromises = clearIds.map(async (clearId) => {
-        const userQuery = new QueryCommand({
+        const userScan = new ScanCommand({
           TableName: USER_TABLE,
-          KeyConditionExpression: 'ClearID = :clearId',
+          FilterExpression: 'ClearID = :clearId',
           ExpressionAttributeValues: {
             ':clearId': clearId,
           },
         });
-        return await docClient.send(userQuery);
+        return await docClient.send(userScan);
       });
 
       const userResults = await Promise.all(userPromises);
@@ -93,25 +92,25 @@ export async function POST(request: Request) {
     } else if (action === 'markAttendance') {
       const { clearId, eventId, attendance } = body;
 
-      // Update all duplicate entries for this clearId
-      const userQuery = new QueryCommand({
-        TableName: USER_TABLE,
-        KeyConditionExpression: 'ClearID = :clearId',
+      // Update attendance in registration table
+      const registrationScan = new ScanCommand({
+        TableName: REGISTRATION_TABLE,
+        FilterExpression: 'PlayerClearID = :clearId AND EventID = :eventId',
         ExpressionAttributeValues: {
           ':clearId': clearId,
+          ':eventId': eventId,
         },
       });
 
-      const userResult = await docClient.send(userQuery);
-      const users = userResult.Items || [];
+      const registrationResult = await docClient.send(registrationScan);
+      const registrations = registrationResult.Items || [];
 
-      // Update attendance for all duplicate entries
-      const updatePromises = users.map(user =>
+      // Update attendance for all matching registrations
+      const updatePromises = registrations.map(registration =>
         docClient.send(new UpdateCommand({
-          TableName: USER_TABLE,
+          TableName: REGISTRATION_TABLE,
           Key: {
-            ClearID: user.ClearID,
-            // Assuming sort key if exists
+            id: registration.id, // Assuming 'id' is the primary key
           },
           UpdateExpression: 'SET Attendance = :attendance, AttendanceUpdatedAt = :timestamp',
           ExpressionAttributeValues: {
@@ -123,21 +122,21 @@ export async function POST(request: Request) {
 
       await Promise.all(updatePromises);
 
-      return NextResponse.json({ success: true, updatedCount: users.length });
+      return NextResponse.json({ success: true, updatedCount: registrations.length });
 
     } else if (action === 'assignChestNumber') {
       const { clearId, chestNumber } = body;
 
-      // Update chest number for all duplicate entries
-      const userQuery = new QueryCommand({
+      // Update chest number for all duplicate entries in user table
+      const userScan = new ScanCommand({
         TableName: USER_TABLE,
-        KeyConditionExpression: 'ClearID = :clearId',
+        FilterExpression: 'ClearID = :clearId',
         ExpressionAttributeValues: {
           ':clearId': clearId,
         },
       });
 
-      const userResult = await docClient.send(userQuery);
+      const userResult = await docClient.send(userScan);
       const users = userResult.Items || [];
 
       const updatePromises = users.map(user =>
@@ -145,7 +144,6 @@ export async function POST(request: Request) {
           TableName: USER_TABLE,
           Key: {
             ClearID: user.ClearID,
-            // Assuming sort key if exists
           },
           UpdateExpression: 'SET ChestNo = :chestNo, ChestNoUpdatedAt = :timestamp',
           ExpressionAttributeValues: {
