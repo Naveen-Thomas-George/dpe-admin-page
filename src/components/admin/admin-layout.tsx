@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { QrCode, Newspaper, BarChart3, LogOut, Moon, Sun, Menu, X, Trophy, Calendar } from "lucide-react"
+import { QrCode, Newspaper, BarChart3, LogOut, Moon, Sun, Menu, X, Trophy, Calendar, UserCheck } from "lucide-react"
 import { signOut } from "@aws-amplify/auth"
 import { useRouter } from "next/navigation"
 
@@ -22,7 +22,7 @@ const getInitialDarkMode = (): boolean => {
 interface AdminLayoutProps {
   children: React.ReactNode
   activeSection: string
-  onSectionChange: (section: "scan" | "news" | "scoreboard" | "fixtures") => void
+  onSectionChange: (section: "scan" | "news" | "scoreboard" | "fixtures" | "verification") => void
 }
 
 export function AdminLayout({ children, activeSection, onSectionChange }: AdminLayoutProps) {
@@ -116,6 +116,12 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
               isActive={activeSection === "fixtures"}
               onClick={() => onSectionChange("fixtures")}
             />
+            <NavButton
+              icon={<UserCheck className="w-5 h-5" />}
+              label="Verification"
+              isActive={activeSection === "verification"}
+              onClick={() => onSectionChange("verification")}
+            />
           </nav>
 
           {/* Footer */}
@@ -158,6 +164,7 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
                 {activeSection === "news" && "News Management"}
                 {activeSection === "scoreboard" && "Scoreboard Control"}
                 {activeSection === "fixtures" && "Fixtures Control"}
+                {activeSection === "verification" && "Verification Portal"}
               </h2>
               <div className="w-10" /> {/* Spacer for alignment */}
             </div>
