@@ -11,8 +11,8 @@ const client = new DynamoDBClient({
 });
 
 const docClient = DynamoDBDocumentClient.from(client);
-const USER_TABLE = "User-3q2hnhg4gnhg7jhx7qgk4x4ge-NONE"; // User table
-const EVENT_TABLE = "IndividualRegistration-3q2hnhg4gnhg7jhx7qgk4x4ge-NONE"; // Event registration table
+const USER_TABLE = "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE"; // User table
+const EVENT_TABLE = "IndividualRegistration-ao7ebzdnjvahrhfgmey6i6vzfu-NONE"; // Event registration table
 
 export async function POST(request: Request) {
   try {
