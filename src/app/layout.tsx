@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AmplifyProvider } from "@/components/AmplifyProvider";
+import AmplifyClientConfig from "@/components/AmplifyClientConfig";
 import "@aws-amplify/ui-react/styles.css";
 
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <AmplifyClientConfig />
         <AmplifyProvider>
         {children}
         </AmplifyProvider>
