@@ -1,16 +1,6 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand, UpdateCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, UpdateCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
-
-const client = new DynamoDBClient({
-  region: "eu-north-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-  },
-});
-
-const docClient = DynamoDBDocumentClient.from(client);
+import { ddbDocClient } from "../../../lib/dynamoClient";
 const USER_TABLE = "User-ao7ebzdnjvahrhfgmey6i6vzfu-NONE"; // User table
 const EVENT_TABLE = "IndividualRegistration-ao7ebzdnjvahrhfgmey6i6vzfu-NONE"; // Event registration table
 
@@ -34,7 +24,7 @@ export async function POST(request: Request) {
           },
         });
 
-        const eventResult = await docClient.send(eventQuery);
+        const eventResult = await ddbDocClient.send(eventQuery);
         const registrations = eventResult.Items || [];
 
         // Get unique registration numbers and emails to find users
@@ -69,7 +59,7 @@ export async function POST(request: Request) {
             });
           }
 
-          const userResult = await docClient.send(queryCommand);
+          const userResult = await ddbDocClient.send(queryCommand);
           users.push(...(userResult.Items || []));
         }
 
@@ -124,7 +114,7 @@ export async function POST(request: Request) {
           ReturnValues: 'ALL_NEW',
         });
 
-        await docClient.send(updateCommand);
+        await ddbDocClient.send(updateCommand);
 
         // Also update attendance for duplicates
         // Find all users with same reg number or email
@@ -136,7 +126,7 @@ export async function POST(request: Request) {
           },
         });
 
-        const userResult = await docClient.send(userQuery);
+        const userResult = await ddbDocClient.send(userQuery);
         const user = userResult.Items?.[0];
 
         if (user) {
@@ -150,7 +140,7 @@ export async function POST(request: Request) {
             },
           });
 
-          const allRegistrations = await docClient.send(allRegistrationsQuery);
+          const allRegistrations = await ddbDocClient.send(allRegistrationsQuery);
           const duplicateRegistrations = allRegistrations.Items?.filter(reg => reg.playerClearId !== clearId) || [];
 
           // Update attendance for all duplicates
@@ -168,7 +158,7 @@ export async function POST(request: Request) {
               },
             });
 
-            await docClient.send(duplicateUpdateCommand);
+            await ddbDocClient.send(duplicateUpdateCommand);
           }
         }
 
@@ -195,7 +185,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "ClearID is required for chest number assignment" }, { status: 400 });
         }
 
-        const userResult = await docClient.send(userQuery);
+        const userResult = await ddbDocClient.send(userQuery);
         const user = userResult.Items?.[0];
 
         if (!user) {
@@ -212,7 +202,7 @@ export async function POST(request: Request) {
           },
         });
 
-        const allRegistrations = await docClient.send(allRegistrationsQuery);
+        const allRegistrations = await ddbDocClient.send(allRegistrationsQuery);
         const userRegistrations = allRegistrations.Items || [];
 
         // Update chest number for all registrations
@@ -230,7 +220,7 @@ export async function POST(request: Request) {
             },
           });
 
-          await docClient.send(updateCommand);
+          await ddbDocClient.send(updateCommand);
         }
 
         return NextResponse.json({ success: true, updatedCount: userRegistrations.length });
