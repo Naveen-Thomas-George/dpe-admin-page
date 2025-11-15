@@ -80,44 +80,69 @@ export async function POST(req: Request) {
       }
 
       // ============================================================
-      // 🟢 MARK ATTENDANCE (FOR SPECIFIC EVENT, ALL CLEAR IDs OF USER)
+      // 🟢 MARK ATTENDANCE (USE REG NO/GMAIL TO GET ALL CLEAR IDs, MARK FOR EVENT)
       // ============================================================
       case "markAttendance": {
-        if (!clearId || !eventId) {
+        const { identifier, eventId } = body; // identifier is regNumber or gmail
+
+        if (!identifier || !eventId) {
           return NextResponse.json(
-            { error: "clearId and eventId are required" },
+            { error: "identifier and eventId are required" },
             { status: 400 }
           );
         }
 
-        // 1. Find the user by clearId
-        const userScan = new ScanCommand({
-          TableName: USER_TABLE,
-          FilterExpression: "clearId = :c",
-          ExpressionAttributeValues: { ":c": clearId }
-        });
-        const userData = await ddbDocClient.send(userScan);
-        const user = userData.Items?.[0];
+        // 1. Find ALL users that match the identifier (regNumber or gmail) - handles duplicates
+        let userScan;
+        const isGmail = identifier.includes("@");
 
-        if (!user) {
+        if (isGmail) {
+          userScan = new ScanCommand({
+            TableName: USER_TABLE,
+            FilterExpression: "christGmail = :i",
+            ExpressionAttributeValues: { ":i": identifier }
+          });
+        } else {
+          // Assume it's a regNumber
+          userScan = new ScanCommand({
+            TableName: USER_TABLE,
+            FilterExpression: "regNumber = :i",
+            ExpressionAttributeValues: { ":i": identifier }
+          });
+        }
+
+        const userData = await ddbDocClient.send(userScan);
+        const users = userData.Items || [];
+
+        if (users.length === 0) {
           return NextResponse.json(
             { error: "User not found" },
             { status: 404 }
           );
         }
 
-        // 2. Find all registrations for this user in this specific event (by regNumber or christGmail)
+        // 2. Extract all CLEAR IDs from the matching users (including duplicates)
+        const clearIds = users.map(u => u.clearId);
+
+        // 3. Find all registrations for these CLEAR IDs in the specific event
         const regScan = new ScanCommand({
           TableName: EVENT_TABLE,
-          FilterExpression: "(regNumber = :r OR christGmail = :e) AND eventId = :event",
+          FilterExpression: "eventId = :event AND playerClearId IN (:c1, :c2, :c3, :c4, :c5)",
           ExpressionAttributeValues: {
-            ":r": user.regNumber,
-            ":e": user.christGmail,
-            ":event": eventId
+            ":event": eventId,
+            ":c1": clearIds[0],
+            ":c2": clearIds[1] || clearIds[0], // Fallback if less than 5
+            ":c3": clearIds[2] || clearIds[0],
+            ":c4": clearIds[3] || clearIds[0],
+            ":c5": clearIds[4] || clearIds[0]
           }
         });
-        const regData = await ddbDocClient.send(regScan);
-        const registrations = regData.Items || [];
+
+        // If more than 5 CLEAR IDs, we need multiple scans (but unlikely)
+        let registrations = (await ddbDocClient.send(regScan)).Items || [];
+
+        // Filter to only include registrations that actually match our CLEAR IDs
+        registrations = registrations.filter(reg => clearIds.includes(reg.playerClearId));
 
         if (registrations.length === 0) {
           return NextResponse.json(
@@ -126,7 +151,7 @@ export async function POST(req: Request) {
           );
         }
 
-        // 3. Update attendance for all registrations of this user in this event
+        // 4. Update attendance for all matching registrations
         const updatePromises = registrations.map(reg =>
           ddbDocClient.send(
             new UpdateCommand({
@@ -140,7 +165,16 @@ export async function POST(req: Request) {
 
         await Promise.all(updatePromises);
 
-        return NextResponse.json({ success: true, updatedCount: registrations.length });
+        return NextResponse.json({
+          success: true,
+          updatedCount: registrations.length,
+          clearIds: clearIds,
+          users: users.map(u => ({
+            clearId: u.clearId,
+            fullName: u.fullName,
+            regNumber: u.regNumber
+          }))
+        });
       }
 
       // ============================================================
