@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       }
 
       // ============================================================
-      // 🟢 MARK ATTENDANCE (PER EVENT)
+      // 🟢 MARK ATTENDANCE (FOR SPECIFIC EVENT, ALL CLEAR IDs OF USER)
       // ============================================================
       case "markAttendance": {
         if (!clearId || !eventId) {
@@ -90,17 +90,57 @@ export async function POST(req: Request) {
           );
         }
 
-        // 1. Update attendance only for this event
-        await ddbDocClient.send(
-          new UpdateCommand({
-            TableName: EVENT_TABLE,
-            Key: { eventId, playerClearId: clearId },
-            UpdateExpression: "SET attendance = :a",
-            ExpressionAttributeValues: { ":a": attendance }
-          })
+        // 1. Find the user by clearId
+        const userScan = new ScanCommand({
+          TableName: USER_TABLE,
+          FilterExpression: "clearId = :c",
+          ExpressionAttributeValues: { ":c": clearId }
+        });
+        const userData = await ddbDocClient.send(userScan);
+        const user = userData.Items?.[0];
+
+        if (!user) {
+          return NextResponse.json(
+            { error: "User not found" },
+            { status: 404 }
+          );
+        }
+
+        // 2. Find all registrations for this user in this specific event (by regNumber or christGmail)
+        const regScan = new ScanCommand({
+          TableName: EVENT_TABLE,
+          FilterExpression: "(regNumber = :r OR christGmail = :e) AND eventId = :event",
+          ExpressionAttributeValues: {
+            ":r": user.regNumber,
+            ":e": user.christGmail,
+            ":event": eventId
+          }
+        });
+        const regData = await ddbDocClient.send(regScan);
+        const registrations = regData.Items || [];
+
+        if (registrations.length === 0) {
+          return NextResponse.json(
+            { error: "No registrations found for this user in this event" },
+            { status: 404 }
+          );
+        }
+
+        // 3. Update attendance for all registrations of this user in this event
+        const updatePromises = registrations.map(reg =>
+          ddbDocClient.send(
+            new UpdateCommand({
+              TableName: EVENT_TABLE,
+              Key: { eventId: reg.eventId, playerClearId: reg.playerClearId },
+              UpdateExpression: "SET attendance = :a",
+              ExpressionAttributeValues: { ":a": true } // Always mark as present
+            })
+          )
         );
 
-        return NextResponse.json({ success: true });
+        await Promise.all(updatePromises);
+
+        return NextResponse.json({ success: true, updatedCount: registrations.length });
       }
 
       // ============================================================
