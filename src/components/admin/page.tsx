@@ -1,14 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
+
+interface Event {
+  name: string;
+  id: string;
+  category: string;
+}
 
 export default function VerificationPage() {
   const [eventId, setEventId] = useState("");
+  const [events, setEvents] = useState<Event[]>([]);
 
   const [searchType, setSearchType] = useState("regNumber");
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [participants, setParticipants] = useState<any[]>([]);
+
+  // Load events on component mount
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const res = await fetch("/api/get-events");
+        const data = await res.json();
+        if (res.ok) {
+          setEvents(data.events || []);
+        }
+      } catch (error) {
+        console.error("Failed to load events:", error);
+      }
+    };
+    loadEvents();
+  }, []);
 
   // ============================================================
   // 🔍 SEARCH API CALL
@@ -67,7 +91,10 @@ export default function VerificationPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) return alert(data.error || "Failed to update attendance");
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update attendance");
+        return;
+      }
 
       // Update row UI
       setParticipants((prev) =>
@@ -75,9 +102,10 @@ export default function VerificationPage() {
           p.clearId === clearId ? { ...p, attendance } : p
         )
       );
+      toast.success(`Attendance ${attendance ? 'marked' : 'unmarked'} successfully`);
     } catch (err) {
       console.error("Attendance error:", err);
-      alert("Failed to update attendance");
+      toast.error("Failed to update attendance");
     }
   };
 
@@ -97,7 +125,10 @@ export default function VerificationPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) return alert(data.error || "Failed to update chest number");
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update chest number");
+        return;
+      }
 
       // Update UI
       setParticipants((prev) =>
@@ -105,9 +136,10 @@ export default function VerificationPage() {
           p.clearId === clearId ? { ...p, chestNo } : p
         )
       );
+      toast.success(`Chest number updated to ${chestNo}`);
     } catch (err) {
       console.error("Chest number error:", err);
-      alert("Failed to update chest number");
+      toast.error("Failed to update chest number");
     }
   };
 
@@ -116,16 +148,21 @@ export default function VerificationPage() {
       {/* TITLE */}
       <h1 className="text-2xl font-bold text-center mb-6">Verify Participants</h1>
 
-      {/* EVENT ID INPUT */}
+      {/* EVENT ID DROPDOWN */}
       <div className="mb-4 p-4 bg-white shadow rounded">
-        <label className="block text-sm font-medium mb-2">Event ID</label>
-        <input
-          type="text"
-          placeholder="Enter Event ID (e.g., SIDI01)"
+        <label className="block text-sm font-medium mb-2">Select Event</label>
+        <select
           className="border p-2 rounded w-full"
           value={eventId}
           onChange={(e) => setEventId(e.target.value)}
-        />
+        >
+          <option value="">Select an event...</option>
+          {events.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.name} ({event.id}) - {event.category}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* SEARCH BOX */}

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AmplifyProvider } from "@/components/AmplifyProvider";
 import AmplifyClientConfig from "@/components/AmplifyClientConfig";
+import { Toaster } from "@/components/ui/sonner";
 import "@aws-amplify/ui-react/styles.css";
 
 
@@ -35,6 +36,7 @@ export default function RootLayout({
         <AmplifyProvider>
         {children}
         </AmplifyProvider>
+        <Toaster />
       </body>
     </html>
   );
