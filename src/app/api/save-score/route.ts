@@ -162,11 +162,18 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "Invalid data: Team entry is required for team events." }, { status: 400 });
             }
 
-            // Check if team entry already exists for this event
-            const teamExists = existingPositions.includes("TEAM#01");
+            // Find existing team positions to determine the next number
+            const existingTeamPositions = existingPositions.filter(pid => pid.startsWith('TEAM#'));
+            const existingNumbers = existingTeamPositions.map(pid => parseInt(pid.split('#')[1])).sort((a, b) => a - b);
 
-            if (teamExists) {
-                return NextResponse.json({ error: "Team entry already exists for this event." }, { status: 400 });
+            let nextNumber = 1;
+            if (existingNumbers.length > 0) {
+                for (let i = 1; i <= existingNumbers.length + 1; i++) {
+                    if (!existingNumbers.includes(i)) {
+                        nextNumber = i;
+                        break;
+                    }
+                }
             }
 
             // Create PutRequest for team entry
@@ -174,7 +181,7 @@ export async function POST(request: Request) {
                 PutRequest: {
                     Item: {
                         EventID: eventId,                             // PK: Partition Key
-                        PositionID: "TEAM#01",                        // SK: Sort Key for team
+                        PositionID: `TEAM#${String(nextNumber).padStart(2, '0')}`, // SK: Sort Key for team (e.g., TEAM#01, TEAM#02)
                         EventName: eventName.trim(),                  // Raw event name for display
                         EventType: 'team',
                         TeamName: teamEntry.teamName.trim(),
