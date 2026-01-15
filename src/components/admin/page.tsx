@@ -1,268 +1,255 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { toast } from "sonner";
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Chip,
+  CircularProgress,
+} from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 
-interface Event {
-  name: string;
-  id: string;
-  category: string;
+/* ================= TYPES ================= */
+
+interface Registration {
+  TeamID: string;
+  TeamName: string;
+  CollegeName: string;
+  RegistrationDate: string;
+  CaptainName: string;
+  CaptainPhone: string;
+  CaptainEmail: string;
+  CaptainDOB: string;
+  CaptainID: string;
+  Category: string;
+  SportCategory: string;
+  DedupKey: string;
+  Teammates: string; // JSON string
 }
 
-export default function VerificationPage() {
-  const [eventId, setEventId] = useState("");
-  const [events, setEvents] = useState<Event[]>([]);
+/* ================= COMPONENT ================= */
 
-  const [searchType, setSearchType] = useState("regNumber");
-  const [searchInput, setSearchInput] = useState("");
+export default function AdminChavaraRegistrationsPage() {
+  const [data, setData] = useState<Registration[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [selected, setSelected] = useState<Registration | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load events on component mount
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        const res = await fetch("/api/get-events");
-        const data = await res.json();
-        if (res.ok) {
-          setEvents(data.events || []);
-        }
-      } catch (error) {
-        console.error("Failed to load events:", error);
+  /* ========== FETCH DATA ========== */
+  async function fetchData(query = "") {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/chavara-registrations?q=${encodeURIComponent(query)}`
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to fetch data");
       }
-    };
-    loadEvents();
+      setData(json.data || []);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
-  // ============================================================
-  // 🔍 SEARCH API CALL
-  // ============================================================
-  const searchParticipants = async (loadAll = false) => {
-    setLoading(true);
+  useEffect(() => {
+    fetchData(search);
+  }, [search]);
 
-    const bodyPayload = {
-      action: "search",
-      eventId,
-      searchCriteria: loadAll
-        ? null
-        : {
-            type: searchType,
-            value: searchInput,
-          },
-    };
+  /* ========== HELPERS ========== */
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-IN");
 
+  const parseTeammates = (json: string) => {
     try {
-      const res = await fetch("/api/verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bodyPayload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Failed to load participants");
-        setParticipants([]);
-      } else {
-        setParticipants(data.users || []);
-      }
-    } catch (err) {
-      console.error("Search error:", err);
-      alert("Error fetching participants");
-    }
-
-    setLoading(false);
-  };
-
-  // ============================================================
-  // 🟢 UPDATE ATTENDANCE
-  // ============================================================
-  const updateAttendance = async (clearId: string, attendance: boolean) => {
-    try {
-      const res = await fetch("/api/verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "markAttendance",
-          eventId,
-          clearId,
-          attendance,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Failed to update attendance");
-        return;
-      }
-
-      // Update row UI
-      setParticipants((prev) =>
-        prev.map((p) =>
-          p.clearId === clearId ? { ...p, attendance } : p
-        )
-      );
-      toast.success(`Attendance ${attendance ? 'marked' : 'unmarked'} successfully`);
-    } catch (err) {
-      console.error("Attendance error:", err);
-      toast.error("Failed to update attendance");
+      return JSON.parse(json) as {
+        name: string;
+        dob: string;
+        collegeId: string;
+      }[];
+    } catch {
+      return [];
     }
   };
 
-  // ============================================================
-  // 🟢 UPDATE CHEST NUMBER (USER TABLE)
-  // ============================================================
-  const updateChestNumber = async (clearId: string, chestNo: string) => {
-    try {
-      const res = await fetch("/api/verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "assignChestNumber",
-          clearId,
-          chestNumber: chestNo,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Failed to update chest number");
-        return;
-      }
-
-      // Update UI
-      setParticipants((prev) =>
-        prev.map((p) =>
-          p.clearId === clearId ? { ...p, chestNo } : p
-        )
-      );
-      toast.success(`Chest number updated to ${chestNo}`);
-    } catch (err) {
-      console.error("Chest number error:", err);
-      toast.error("Failed to update chest number");
-    }
-  };
+  /* ================= UI ================= */
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100">
-      {/* TITLE */}
-      <h1 className="text-2xl font-bold text-center mb-6">Verify Participants</h1>
+    <Box p={4}>
+      {/* Header */}
+      <Typography variant="h4" fontWeight={700}>
+        Chavara Cup – Admin Verification
+      </Typography>
+      <Typography color="text.secondary" mb={3}>
+        Search and verify team registrations
+      </Typography>
 
-      {/* EVENT ID DROPDOWN */}
-      <div className="mb-4 p-4 bg-white shadow rounded">
-        <label className="block text-sm font-medium mb-2">Select Event</label>
-        <select
-          className="border p-2 rounded w-full"
-          value={eventId}
-          onChange={(e) => setEventId(e.target.value)}
+      {/* Search */}
+      <Box display="flex" gap={2} mb={3}>
+        <TextField
+          label="Search"
+          placeholder="Team Name or College Name"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ minWidth: 320 }}
+        />
+        <Button
+          variant="contained"
+          onClick={() => fetchData(search)}
+          disabled={loading}
         >
-          <option value="">Select an event...</option>
-          {events.map((event) => (
-            <option key={event.id} value={event.id}>
-              {event.name} ({event.id}) - {event.category}
-            </option>
-          ))}
-        </select>
-      </div>
+          Search
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            setSearch("");
+            fetchData("");
+          }}
+        >
+          Reset
+        </Button>
+      </Box>
 
-      {/* SEARCH BOX */}
-      <div className="mb-4 p-4 bg-white shadow rounded">
-        <div className="flex items-center gap-4">
-          <select
-            className="border p-2 rounded"
-            value={searchType}
-            onChange={(e) => setSearchType(e.target.value)}
+      {error && (
+        <Typography color="error" mb={2}>
+          Error: {error}
+        </Typography>
+      )}
+
+      {/* Table */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell><b>Team</b></TableCell>
+              <TableCell><b>College</b></TableCell>
+              <TableCell><b>Captain</b></TableCell>
+              <TableCell><b>Phone</b></TableCell>
+              <TableCell><b>Registered</b></TableCell>
+              <TableCell><b>Action</b></TableCell>
+            </TableRow>
+          </TableHead>
+
+          <TableBody>
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  <CircularProgress size={24} />
+                </TableCell>
+              </TableRow>
+            )}
+
+            {!loading && data.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  No registrations found
+                </TableCell>
+              </TableRow>
+            )}
+
+            {data.map((row) => (
+              <TableRow key={row.TeamID} hover>
+                <TableCell>{row.TeamName}</TableCell>
+                <TableCell>{row.CollegeName}</TableCell>
+                <TableCell>{row.CaptainName}</TableCell>
+                <TableCell>{row.CaptainPhone}</TableCell>
+                <TableCell>{formatDate(row.RegistrationDate)}</TableCell>
+                <TableCell>
+                  <Button size="small" onClick={() => setSelected(row)}>
+                    View
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* DETAILS MODAL */}
+      <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Team Details
+          <IconButton
+            onClick={() => setSelected(null)}
+            sx={{ position: "absolute", right: 8, top: 8 }}
           >
-            <option value="regNumber">Reg Number</option>
-            <option value="gmail">Gmail</option>
-            <option value="name">Name</option>
-          </select>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
 
-          <input
-            type="text"
-            placeholder="Search value…"
-            className="border p-2 rounded flex-1"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
+        <DialogContent dividers>
+          {selected && (
+            <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
+              <Detail label="Team Name" value={selected.TeamName} />
+              <Detail label="College" value={selected.CollegeName} />
+              <Detail label="Captain" value={selected.CaptainName} />
+              <Detail label="Phone" value={selected.CaptainPhone} />
+              <Detail label="Email" value={selected.CaptainEmail} />
+              <Detail label="DOB" value={formatDate(selected.CaptainDOB)} />
+              <Detail label="Captain ID" value={selected.CaptainID} />
+              <Detail label="Dedup Key" value={selected.DedupKey} />
 
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-            disabled={loading || !eventId}
-            onClick={() => searchParticipants(false)}
-          >
-            Search
-          </button>
+              <Box>
+                <Typography fontWeight={600}>Category</Typography>
+                <Chip label={selected.Category} size="small" />
+              </Box>
 
-          <button
-            className="bg-gray-700 text-white px-4 py-2 rounded"
-            disabled={loading || !eventId}
-            onClick={() => searchParticipants(true)}
-          >
-            Load All Participants
-          </button>
-        </div>
-      </div>
+              <Box>
+                <Typography fontWeight={600}>Sport</Typography>
+                <Chip label={selected.SportCategory} size="small" />
+              </Box>
 
-      {/* TABLE */}
-      <div className="bg-white shadow rounded p-4 overflow-auto">
-        {loading ? (
-          <p className="text-center py-6">Loading...</p>
-        ) : participants.length === 0 ? (
-          <p className="text-center py-6 text-gray-500">
-            No participants found.
-          </p>
-        ) : (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-200 text-left">
-                <th className="p-2">Name</th>
-                <th className="p-2">Reg Number</th>
-                <th className="p-2">Gmail</th>
-                <th className="p-2">Chest No</th>
-                <th className="p-2">Attendance</th>
-                <th className="p-2">Duplicates</th>
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((p) => (
-                <tr key={p.clearId} className="border-t">
-                  <td className="p-2">{p.fullName}</td>
-                  <td className="p-2">{p.regNumber}</td>
-                  <td className="p-2">{p.christGmail}</td>
+              <Box gridColumn="1 / -1">
+                <Typography fontWeight={600} mb={1}>
+                  Teammates
+                </Typography>
+                <ul>
+                  {parseTeammates(selected.Teammates).map((m, i) => (
+                    <li key={i}>
+                      {m.name} — {m.collegeId} ({formatDate(m.dob)})
+                    </li>
+                  ))}
+                </ul>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Box>
+  );
+}
 
-                  {/* CHEST NUMBER INPUT */}
-                  <td className="p-2">
-                    <input
-                      type="number"
-                      className="border p-1 rounded w-24"
-                      value={p.chestNo || ""}
-                      onChange={(e) =>
-                        updateChestNumber(p.clearId, e.target.value)
-                      }
-                    />
-                  </td>
+/* ================= HELPER COMPONENT ================= */
 
-                  {/* ATTENDANCE TOGGLE */}
-                  <td className="p-2">
-                    <input
-                      type="checkbox"
-                      checked={p.attendance}
-                      onChange={(e) =>
-                        updateAttendance(p.clearId, e.target.checked)
-                      }
-                    />
-                  </td>
-
-                  <td className="p-2 text-red-600 font-bold">
-                    {p.duplicates > 0 ? p.duplicates : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <Box>
+      <Typography fontWeight={600}>{label}</Typography>
+      <Typography>{value}</Typography>
+    </Box>
   );
 }
