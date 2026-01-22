@@ -1,5 +1,5 @@
 LAST UPDATED 1/2026
-
+SOON TO BE CHANGED/UPDATED
 
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app) and integrated with AWS Amplify for authentication and data management.
